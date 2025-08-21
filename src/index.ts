@@ -2,10 +2,7 @@
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
+import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { WallosClient } from './wallos-client.js';
 import { getMasterDataTool, handleGetMasterData } from './tools/master-data.js';
@@ -37,7 +34,7 @@ const server = new Server(
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 // Register tools
@@ -95,10 +92,10 @@ async function testConnection(): Promise<void> {
 async function main(): Promise<void> {
   // Test connection on startup
   await testConnection();
-  
+
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  
+
   // eslint-disable-next-line no-console
   console.log('Wallos MCP server started successfully');
   // eslint-disable-next-line no-console

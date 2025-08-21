@@ -42,7 +42,7 @@ export class WallosClient {
           throw new Error(wallosError.title || 'Unknown Wallos API error');
         }
         throw error;
-      }
+      },
     );
   }
 
