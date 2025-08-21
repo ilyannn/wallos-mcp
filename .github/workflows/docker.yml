@@ -73,9 +73,14 @@ jobs:
           # Build image for testing
           docker build -t wallos-mcp-test .
 
-          # Test basic container functionality
-          echo "Testing container startup..."
-          timeout 10s docker run --rm wallos-mcp-test || if [ $? -eq 124 ]; then
+          # Test basic container functionality with required environment variables
+          echo "Testing container startup with environment variables..."
+          timeout 10s docker run --rm \
+            -e WALLOS_URL=http://mock-wallos:8282 \
+            -e WALLOS_USERNAME=test_user \
+            -e WALLOS_PASSWORD=test_password \
+            -e LOG_LEVEL=debug \
+            wallos-mcp-test || if [ $? -eq 124 ]; then
             echo "✅ Container started successfully (timed out as expected)"
           else
             echo "❌ Container failed to start"
@@ -186,7 +191,11 @@ jobs:
           echo "Testing container security (non-root user)..."
 
           # Verify container runs as non-root user
-          USER_CHECK=$(docker run --rm wallos-mcp-integration id -u)
+          USER_CHECK=$(docker run --rm \
+            -e WALLOS_URL=http://mock-wallos:8282 \
+            -e WALLOS_USERNAME=test_user \
+            -e WALLOS_PASSWORD=test_password \
+            wallos-mcp-integration id -u)
           if [ "$USER_CHECK" != "0" ]; then
             echo "✅ Container runs as non-root user (UID: $USER_CHECK)"
           else

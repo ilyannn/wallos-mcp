@@ -53,7 +53,7 @@ export class WallosClient {
         config.headers = config.headers || {};
         config.headers.Cookie = `PHPSESSID=${this.session.cookie}`;
       }
-      
+
       // Ensure we have an API key for API endpoints
       if (config.url && config.url.startsWith('/api/')) {
         await this.ensureApiKey();
@@ -202,7 +202,7 @@ export class WallosClient {
 
       // Extract PHPSESSID from Set-Cookie headers
       let sessionCookieValue: string | undefined;
-      
+
       if (loginResponse.headers['set-cookie']) {
         const setCookieHeaders = loginResponse.headers['set-cookie'];
         for (const cookieHeader of setCookieHeaders) {
