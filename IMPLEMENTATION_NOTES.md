@@ -263,7 +263,7 @@ When picking up in a new session:
 1. **Super Linter Errors**
    - Use `just superlint-verbose` for detailed debugging
    - Check specific file violations in logs
-   - Run `just fmt` to auto-fix formatting issues
+   - Run `just fmt` to autofix formatting issues
 
 2. **Docker Build Issues**
    - Verify Dockerfile syntax with `just superlint`

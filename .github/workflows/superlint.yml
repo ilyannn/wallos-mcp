@@ -44,7 +44,7 @@ jobs:
           VALIDATE_JSCPD: true
           VALIDATE_JSON: true
           VALIDATE_MARKDOWN: true
-          VALIDATE_NATURAL_LANGUAGE: false
+          VALIDATE_NATURAL_LANGUAGE: true
           VALIDATE_TYPESCRIPT_ES: true
           VALIDATE_YAML: true
 
