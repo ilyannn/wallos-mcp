@@ -31,6 +31,38 @@ docker-run:
     --name wallos-mcp \
     wallos-mcp:latest
 
+# Launch a clean Wallos development instance (latest)
+wallos-dev:
+  @echo "Starting fresh Wallos development instance..."
+  docker run -d \
+    --name wallos-dev \
+    --rm \
+    -p 8285:80 \
+    -v wallos-dev-db:/var/www/html/db \
+    -v wallos-dev-logos:/var/www/html/images/uploads/logos \
+    wallos:latest
+  @echo "✅ Wallos dev instance started at http://localhost:8285"
+  @echo "🗄️  Fresh database - complete setup wizard"
+  @echo "📝 Use 'just wallos-dev-stop' to stop and cleanup"
+
+# Stop and cleanup the Wallos dev instance
+wallos-dev-stop:
+  @echo "Stopping Wallos development instance..."
+  -docker stop wallos-dev
+  @echo "✅ Wallos dev instance stopped"
+  @echo "💾 Data preserved in volumes: wallos-dev-db, wallos-dev-logos"
+
+# Clean restart of Wallos dev instance (preserves data)
+wallos-dev-restart: wallos-dev-stop wallos-dev
+
+# Reset Wallos dev instance (removes all data)
+wallos-dev-reset:
+  @echo "⚠️  Resetting Wallos dev instance (removes all data)..."
+  -docker stop wallos-dev
+  -docker volume rm wallos-dev-db wallos-dev-logos
+  @echo "🗑️  All Wallos dev data removed"
+  @echo "🚀 Run 'just wallos-dev' to start fresh"
+
 # Format code with Prettier and other formatters
 fmt:
   bun run format
@@ -278,5 +310,11 @@ help:
   @echo ""
   @echo "Docker:"
   @echo "  just docker        # Build and run in Docker"
+  @echo ""
+  @echo "Wallos Development:"
+  @echo "  just wallos-dev         # Start fresh Wallos instance"
+  @echo "  just wallos-dev-stop    # Stop Wallos instance"
+  @echo "  just wallos-dev-restart # Restart (preserves data)"
+  @echo "  just wallos-dev-reset   # Reset (removes all data)"
   @echo ""
   @echo "Run 'just --list' to see all available commands"
