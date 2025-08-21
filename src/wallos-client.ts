@@ -46,8 +46,14 @@ export class WallosClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this.client as any).defaults.jar = this.cookieJar;
 
-    // Add request interceptor to include API key (when available)
+    // Add request interceptor to include API key and session cookies
     this.client.interceptors.request.use(async (config) => {
+      // Add session cookie if available
+      if (this.session && this.session.cookie) {
+        config.headers = config.headers || {};
+        config.headers.Cookie = `PHPSESSID=${this.session.cookie}`;
+      }
+      
       // Ensure we have an API key for API endpoints
       if (config.url && config.url.startsWith('/api/')) {
         await this.ensureApiKey();
@@ -178,7 +184,7 @@ export class WallosClient {
 
     try {
       // Submit login form
-      await this.client.post(
+      const loginResponse = await this.client.post(
         '/login.php',
         new URLSearchParams({
           username: this.username,
@@ -194,17 +200,27 @@ export class WallosClient {
         },
       );
 
-      // Check if login was successful by looking for the session cookie
-      const cookies = await this.cookieJar.getCookies(this.client.defaults.baseURL!);
-      const sessionCookie = cookies.find((cookie) => cookie.key === 'PHPSESSID');
+      // Extract PHPSESSID from Set-Cookie headers
+      let sessionCookieValue: string | undefined;
+      
+      if (loginResponse.headers['set-cookie']) {
+        const setCookieHeaders = loginResponse.headers['set-cookie'];
+        for (const cookieHeader of setCookieHeaders) {
+          if (cookieHeader.startsWith('PHPSESSID=')) {
+            // Extract the cookie value (before the first semicolon)
+            sessionCookieValue = cookieHeader.split(';')[0].split('=')[1];
+            break;
+          }
+        }
+      }
 
-      if (!sessionCookie) {
+      if (!sessionCookieValue) {
         throw new Error('Failed to authenticate: No session cookie received');
       }
 
       // Store session info
       this.session = {
-        cookie: sessionCookie.value,
+        cookie: sessionCookieValue,
         expiresAt: new Date(Date.now() + 3600000), // 1 hour default
       };
 
