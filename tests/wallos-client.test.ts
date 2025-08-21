@@ -8,8 +8,6 @@ import { WallosClient } from '../src/wallos-client.js';
 import type {
   CategoriesResponse,
   CurrenciesResponse,
-  PaymentMethodsResponse,
-  HouseholdResponse,
 } from '../src/types/index.js';
 
 // Mock axios

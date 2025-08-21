@@ -4,7 +4,7 @@
   "parserOptions": {
     "ecmaVersion": 2022,
     "sourceType": "module",
-    "project": "./tsconfig.json"
+    "project": ["./tsconfig.json", "./tsconfig.eslint.json"]
   },
   "rules": {
     "@typescript-eslint/explicit-function-return-type": "warn",

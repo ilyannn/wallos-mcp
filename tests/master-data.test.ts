@@ -4,7 +4,6 @@
  */
 
 import { describe, test, expect, beforeEach, mock, spyOn } from 'bun:test';
-import { WallosClient } from '../src/wallos-client.js';
 import { getMasterDataTool, handleGetMasterData } from '../src/tools/master-data.js';
 import type { MasterData } from '../src/types/index.js';
 

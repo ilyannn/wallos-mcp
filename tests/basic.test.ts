@@ -3,6 +3,8 @@
  * These tests verify core functionality and setup
  */
 
+import { describe, test, expect } from 'bun:test';
+
 describe('Basic MCP Setup', () => {
   test('should be able to import environment configuration', async () => {
     // Test that dotenv can be imported
