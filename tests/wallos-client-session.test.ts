@@ -293,8 +293,8 @@ describe('WallosClient Session Authentication', () => {
 
       const result = await client.addCategory('Test');
 
-      // Should return the raw response
-      expect(result).toBe('Not JSON');
+      // Should return the raw response (string gets returned as-is)
+      expect(result as any).toBe('Not JSON');
     });
   });
 
