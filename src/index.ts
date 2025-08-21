@@ -6,10 +6,20 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 import { WallosClient } from './wallos-client.js';
 import { getMasterDataTool, handleGetMasterData } from './tools/master-data.js';
+import {
+  addCategoryTool,
+  updateCategoryTool,
+  deleteCategoryTool,
+  handleAddCategory,
+  handleUpdateCategory,
+  handleDeleteCategory,
+} from './tools/categories.js';
 
 // Get configuration from environment variables
 const WALLOS_URL = process.env.WALLOS_URL || 'http://localhost:8282';
 const WALLOS_API_KEY = process.env.WALLOS_API_KEY;
+const WALLOS_USERNAME = process.env.WALLOS_USERNAME;
+const WALLOS_PASSWORD = process.env.WALLOS_PASSWORD;
 
 if (!WALLOS_API_KEY) {
   // eslint-disable-next-line no-console
@@ -21,6 +31,8 @@ if (!WALLOS_API_KEY) {
 const wallosClient = new WallosClient({
   baseUrl: WALLOS_URL,
   apiKey: WALLOS_API_KEY,
+  username: WALLOS_USERNAME,
+  password: WALLOS_PASSWORD,
   timeout: 30000, // 30 second timeout
 });
 
@@ -39,31 +51,51 @@ const server = new Server(
 
 // Register tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [getMasterDataTool],
-  };
+  const tools = [getMasterDataTool];
+
+  // Only register mutation tools if credentials are available
+  if (WALLOS_USERNAME && WALLOS_PASSWORD) {
+    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool);
+  }
+
+  return { tools };
 });
 
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name } = request.params;
+  const { name, arguments: args } = request.params;
+
+  let result: string;
 
   switch (name) {
-    case 'get_master_data': {
-      const result = await handleGetMasterData(wallosClient);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: result,
-          },
-        ],
-      };
-    }
+    case 'get_master_data':
+      result = await handleGetMasterData(wallosClient);
+      break;
+
+    case 'add_category':
+      result = await handleAddCategory(wallosClient, args as { name?: string });
+      break;
+
+    case 'update_category':
+      result = await handleUpdateCategory(wallosClient, args as { id: number; name: string });
+      break;
+
+    case 'delete_category':
+      result = await handleDeleteCategory(wallosClient, args as { id: number });
+      break;
 
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
+
+  return {
+    content: [
+      {
+        type: 'text',
+        text: result,
+      },
+    ],
+  };
 });
 
 // Test connection on startup
@@ -93,7 +125,16 @@ async function main(): Promise<void> {
 
   process.stderr.write('Wallos MCP server started successfully\n');
   process.stderr.write(`Wallos URL: ${WALLOS_URL}\n`);
-  process.stderr.write('Available tools: get_master_data\n');
+
+  if (WALLOS_USERNAME && WALLOS_PASSWORD) {
+    process.stderr.write(
+      'Available tools: get_master_data, add_category, update_category, delete_category\n',
+    );
+    process.stderr.write('Mutation operations enabled (session credentials provided)\n');
+  } else {
+    process.stderr.write('Available tools: get_master_data\n');
+    process.stderr.write('Read-only mode (no session credentials provided)\n');
+  }
 }
 
 // Handle graceful shutdown

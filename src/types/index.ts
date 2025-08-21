@@ -69,6 +69,26 @@ export interface MasterData {
   };
 }
 
+// Mutation response types
+export interface MutationResponse {
+  success: boolean;
+  message?: string;
+  errorMessage?: string;
+  id?: number;
+  categoryId?: number;
+}
+
+export interface CategoryMutationResponse extends MutationResponse {
+  categoryId?: number;
+}
+
+// Session types
+export interface SessionInfo {
+  cookie: string;
+  expiresAt: Date;
+  userId?: number;
+}
+
 // Error types
 export interface WallosError {
   success: false;
@@ -79,5 +99,7 @@ export interface WallosError {
 export interface WallosClientConfig {
   baseUrl: string;
   apiKey: string;
+  username?: string;
+  password?: string;
   timeout?: number;
 }

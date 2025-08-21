@@ -13,6 +13,8 @@ import type {
 // Mock axios
 const mockAxiosInstance = {
   get: mock(),
+  post: mock(),
+  defaults: {},
   interceptors: {
     request: { use: mock() },
     response: { use: mock() },
@@ -21,6 +23,7 @@ const mockAxiosInstance = {
 
 const mockAxios = {
   create: mock(() => mockAxiosInstance),
+  isAxiosError: mock(() => false),
 };
 
 // Mock the axios module
@@ -28,11 +31,27 @@ mock.module('axios', () => ({
   default: mockAxios,
 }));
 
+// Mock axios-cookiejar-support
+const mockWrapper = mock((instance) => instance);
+mock.module('axios-cookiejar-support', () => ({
+  wrapper: mockWrapper,
+}));
+
+// Mock tough-cookie
+const mockCookieJar = {
+  getCookies: mock(() => Promise.resolve([])),
+};
+mock.module('tough-cookie', () => ({
+  CookieJar: mock(() => mockCookieJar),
+}));
+
 describe('WallosClient', () => {
   let client: WallosClient;
   const mockConfig = {
     baseUrl: 'http://localhost:8282',
     apiKey: 'test-api-key',
+    username: 'test-user',
+    password: 'test-pass',
     timeout: 5000,
   };
 
@@ -51,6 +70,7 @@ describe('WallosClient', () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        withCredentials: true,
       });
     });
 
@@ -68,6 +88,7 @@ describe('WallosClient', () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        withCredentials: true,
       });
     });
   });

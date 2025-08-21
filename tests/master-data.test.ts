@@ -9,7 +9,7 @@ import type { MasterData } from '../src/types/index.js';
 
 describe('Master Data Tool', () => {
   let mockClient: any;
-  let consoleSpy: any;
+  let stderrSpy: any;
 
   beforeEach(() => {
     // Create a mock client
@@ -17,11 +17,8 @@ describe('Master Data Tool', () => {
       getMasterData: mock(),
     };
 
-    // Mock console methods
-    consoleSpy = {
-      log: spyOn(console, 'log').mockImplementation(() => {}),
-      error: spyOn(console, 'error').mockImplementation(() => {}),
-    };
+    // Mock process.stderr.write
+    stderrSpy = spyOn(process.stderr, 'write').mockImplementation(() => true);
   });
 
   describe('getMasterDataTool definition', () => {
@@ -68,9 +65,9 @@ describe('Master Data Tool', () => {
       const result = await handleGetMasterData(mockClient);
 
       expect(mockClient.getMasterData).toHaveBeenCalledTimes(1);
-      expect(consoleSpy.log).toHaveBeenCalledWith('Fetching master data from Wallos API...');
-      expect(consoleSpy.log).toHaveBeenCalledWith(
-        'Successfully retrieved master data: 2 categories, 2 currencies, 2 payment methods, 1 household members'
+      expect(stderrSpy).toHaveBeenCalledWith('Fetching master data from Wallos API...\n');
+      expect(stderrSpy).toHaveBeenCalledWith(
+        'Successfully retrieved master data: 2 categories, 2 currencies, 2 payment methods, 1 household members\n'
       );
 
       const parsedResult = JSON.parse(result);
@@ -95,8 +92,8 @@ describe('Master Data Tool', () => {
       const result = await handleGetMasterData(mockClient);
 
       expect(mockClient.getMasterData).toHaveBeenCalledTimes(1);
-      expect(consoleSpy.log).toHaveBeenCalledWith('Fetching master data from Wallos API...');
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error fetching master data:', errorMessage);
+      expect(stderrSpy).toHaveBeenCalledWith('Fetching master data from Wallos API...\n');
+      expect(stderrSpy).toHaveBeenCalledWith(`Error fetching master data: ${errorMessage}\n`);
 
       const parsedResult = JSON.parse(result);
       expect(parsedResult).toHaveProperty('error', 'Failed to fetch master data');
@@ -110,7 +107,7 @@ describe('Master Data Tool', () => {
 
       const result = await handleGetMasterData(mockClient);
 
-      expect(consoleSpy.error).toHaveBeenCalledWith('Error fetching master data:', 'Unknown error occurred');
+      expect(stderrSpy).toHaveBeenCalledWith('Error fetching master data: Unknown error occurred\n');
 
       const parsedResult = JSON.parse(result);
       expect(parsedResult).toHaveProperty('error', 'Failed to fetch master data');

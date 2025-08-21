@@ -1,4 +1,6 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import * as tough from 'tough-cookie';
+import { wrapper } from 'axios-cookiejar-support';
 import {
   WallosClientConfig,
   CategoriesResponse,
@@ -7,21 +9,38 @@ import {
   HouseholdResponse,
   WallosError,
   MasterData,
+  SessionInfo,
+  CategoryMutationResponse,
 } from './types/index.js';
 
 export class WallosClient {
   private client: AxiosInstance;
   private apiKey: string;
+  private username?: string;
+  private password?: string;
+  private session?: SessionInfo;
+  private cookieJar: tough.CookieJar;
 
   constructor(config: WallosClientConfig) {
     this.apiKey = config.apiKey;
-    this.client = axios.create({
+    this.username = config.username;
+    this.password = config.password;
+    this.cookieJar = new tough.CookieJar();
+
+    const axiosInstance = axios.create({
       baseURL: config.baseUrl,
       timeout: config.timeout || 10000,
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true,
     });
+
+    this.client = wrapper(axiosInstance) as AxiosInstance;
+
+    // Attach cookie jar to the wrapped client
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (this.client as any).defaults.jar = this.cookieJar;
 
     // Add request interceptor to include API key
     this.client.interceptors.request.use((config) => {
@@ -139,5 +158,121 @@ export class WallosClient {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Authenticate with session credentials
+   */
+  private async authenticateWithSession(): Promise<void> {
+    if (!this.username || !this.password) {
+      throw new Error('Username and password required for mutation operations');
+    }
+
+    try {
+      // Submit login form
+      await this.client.post(
+        '/login.php',
+        new URLSearchParams({
+          username: this.username,
+          password: this.password,
+          rememberme: 'on',
+        }),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          maxRedirects: 0,
+          validateStatus: (status) => status >= 200 && status < 400,
+        },
+      );
+
+      // Check if login was successful by looking for the session cookie
+      const cookies = await this.cookieJar.getCookies(this.client.defaults.baseURL!);
+      const sessionCookie = cookies.find((cookie) => cookie.key === 'PHPSESSID');
+
+      if (!sessionCookie) {
+        throw new Error('Failed to authenticate: No session cookie received');
+      }
+
+      // Store session info
+      this.session = {
+        cookie: sessionCookie.value,
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour default
+      };
+
+      process.stderr.write('Successfully authenticated with Wallos\n');
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw new Error(`Authentication failed: ${error.message}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Ensure we have a valid session for mutation operations
+   */
+  private async ensureSession(): Promise<void> {
+    // Check if we have session credentials
+    if (!this.username || !this.password) {
+      throw new Error(
+        'Session credentials (WALLOS_USERNAME and WALLOS_PASSWORD) required for mutation operations',
+      );
+    }
+
+    // Check if we need to authenticate or refresh
+    if (!this.session || new Date() >= this.session.expiresAt) {
+      await this.authenticateWithSession();
+    }
+  }
+
+  /**
+   * Add a new category
+   */
+  async addCategory(name?: string): Promise<CategoryMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({ action: 'add' });
+    if (name) {
+      params.append('name', name);
+    }
+
+    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Update an existing category
+   */
+  async updateCategory(id: number, name: string): Promise<CategoryMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({
+      action: 'edit',
+      categoryId: id.toString(),
+      name: name,
+    });
+
+    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Delete a category
+   */
+  async deleteCategory(id: number): Promise<CategoryMutationResponse> {
+    if (id === 1) {
+      throw new Error('Cannot delete the default category (ID: 1)');
+    }
+
+    await this.ensureSession();
+
+    const params = new URLSearchParams({
+      action: 'delete',
+      categoryId: id.toString(),
+    });
+
+    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    return response.data;
   }
 }
