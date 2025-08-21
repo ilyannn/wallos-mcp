@@ -70,7 +70,7 @@ wallos-dev-reset-with-template:
   -docker volume rm wallos-dev-db wallos-dev-logos
   docker run -d --name wallos-dev --rm -p 8285:80 -v wallos-dev-db:/var/www/html/db -v wallos-dev-logos:/var/www/html/images/uploads/logos wallos:latest
   @sleep 3
-  docker cp wallos.dev.db wallos-dev:/var/www/html/db/wallos.db
+  docker cp dev/wallos.dev.db wallos-dev:/var/www/html/db/wallos.db
   docker restart wallos-dev
   @echo "✅ Wallos dev instance reset with template data"
   @echo "🗄️  Template database restored"
@@ -130,6 +130,14 @@ setup:
   @echo "Please edit .env with your Wallos credentials"
   bun install
   @echo "Setup complete! Edit .env then run 'just start' to begin development"
+
+# Setup development environment with dev instance
+setup-dev:
+  cp dev/.env.dev .env
+  @echo "Development environment configured for localhost:8285"
+  @echo "Make sure to start Wallos dev instance with 'just wallos-dev-start'"
+  bun install
+  @echo "Dev setup complete! Run 'just start' to begin development"
 
 # Create a new tool file
 new-tool NAME:
@@ -307,7 +315,8 @@ help:
   @echo "========================================"
   @echo ""
   @echo "Quick Start:"
-  @echo "  just setup         # Initial setup"
+  @echo "  just setup         # Initial setup (production)"
+  @echo "  just setup-dev     # Setup for dev instance"
   @echo "  just start         # Start development server"
   @echo "  just test          # Run tests"
   @echo ""
@@ -325,9 +334,10 @@ help:
   @echo "  just docker        # Build and run in Docker"
   @echo ""
   @echo "Wallos Development:"
-  @echo "  just wallos-dev         # Start fresh Wallos instance"
-  @echo "  just wallos-dev-stop    # Stop Wallos instance"
-  @echo "  just wallos-dev-restart # Restart (preserves data)"
-  @echo "  just wallos-dev-reset   # Reset (removes all data)"
+  @echo "  just wallos-dev-start              # Start fresh Wallos instance"
+  @echo "  just wallos-dev-stop               # Stop Wallos instance"
+  @echo "  just wallos-dev-restart            # Restart (preserves data)"
+  @echo "  just wallos-dev-reset              # Reset (removes all data)"
+  @echo "  just wallos-dev-reset-with-template # Reset with dev database template"
   @echo ""
   @echo "Run 'just --list' to see all available commands"
