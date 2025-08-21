@@ -196,8 +196,10 @@ wallos-mcp/
 
 ### GitHub Actions Workflows
 
-- **Code Quality & Linting**: TypeScript checking, ESLint, Prettier formatting, security audits
-- **Test & Build**: Unit testing and build verification with Node.js compatibility (18, 20, 22)
+- **Code Quality & Linting**: TypeScript checking, ESLint, Prettier
+  formatting, security audits
+- **Test & Build**: Unit testing and build verification with Node.js
+  compatibility (18, 20, 22)
 - **Docker Build**: Multi-platform builds with security scanning
 - **Super Linter**: Comprehensive code quality checks with 10+ linters
 - **Automatic Publishing**: Docker images to GitHub Container Registry
@@ -212,7 +214,8 @@ just superlint # Comprehensive Super Linter (fast)
 just superlint-verbose # Detailed debugging output
 ```
 
-All workflows run automatically on pushes and pull requests with smart validation modes.
+All workflows run automatically on pushes and pull requests with smart
+validation modes.
 
 ## Development
 

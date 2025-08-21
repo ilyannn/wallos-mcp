@@ -220,7 +220,8 @@ bunx @modelcontextprotocol/cli test --tool list_subscriptions
 
 4. **Super Linter** (`.github/workflows/superlint.yml`)
    - Comprehensive code quality checks
-   - Relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
+   - Relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks,
+     JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
    - Smart validation: Full codebase on main, changed files on PRs
 
 ### Quality Assurance
