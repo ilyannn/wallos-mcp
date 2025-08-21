@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json bun.lock ./
-COPY tsconfig.json ./
+COPY tsconfig.json tsconfig.build.json ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile
