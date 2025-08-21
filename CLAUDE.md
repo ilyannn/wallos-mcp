@@ -184,7 +184,7 @@ SESSION_TIMEOUT=3600000
 ## Related Projects
 
 - **Wallos**: Main subscription management application at `/Users/in/Code/Wallos`
-- **MCP SDK**: Model Context Protocol at https://modelcontextprotocol.io
+- **MCP SDK**: Model Context Protocol at <https://modelcontextprotocol.io>
 
 ## Notes for Claude Code
 
