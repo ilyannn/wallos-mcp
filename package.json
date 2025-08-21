@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "bun run tsc",
+    "build": "bun run tsc --project tsconfig.build.json",
     "dev": "bun --watch src/index.ts",
     "start": "bun dist/index.js",
     "start:local": "bun src/index.ts",
