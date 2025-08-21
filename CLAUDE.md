@@ -1,10 +1,14 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with the Wallos MCP server codebase.
+This file provides guidance to Claude Code (claude.ai/code) when working with
+the Wallos MCP server codebase.
 
 ## Project Overview
 
-Wallos MCP Server is a Model Context Protocol server that enables Claude Desktop to interact with Wallos subscription management instances. This TypeScript project uses Bun runtime and provides comprehensive tooling for development and deployment.
+Wallos MCP Server is a Model Context Protocol server that enables Claude
+Desktop to interact with Wallos subscription management instances. This
+TypeScript project uses Bun runtime and provides comprehensive tooling for
+development and deployment.
 
 ## Development Commands
 
@@ -60,7 +64,7 @@ Use the `just` command runner for all development tasks:
 
 ### Project Structure
 
-```
+```text
 src/
 ├── index.ts              # MCP server entry point
 ├── wallos-client.ts      # Wallos API client with session management
@@ -102,7 +106,8 @@ src/
    - Automatic publishing to GitHub Container Registry
 
 4. **Super Linter** (`.github/workflows/superlint.yml`)
-   - Project-relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
+   - Project-relevant linters: Bash, Dockerfile, Env, GitHub Actions,
+     GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
    - Smart validation: Full codebase on main, changed files on PRs
    - Consistent with local `just superlint` configuration
 
@@ -138,8 +143,7 @@ just check   # All quality checks before commit
 ```bash
 # Required for MCP server
 WALLOS_URL=http://localhost:8282
-WALLOS_USERNAME=your_username
-WALLOS_PASSWORD=your_password
+WALLOS_API_KEY=your_api_key
 
 # Optional
 LOG_LEVEL=info

@@ -32,7 +32,7 @@ docker-run:
     wallos-mcp:latest
 
 # Launch a clean Wallos development instance (latest)
-wallos-dev:
+wallos-dev-start:
   @echo "Starting fresh Wallos development instance..."
   docker run -d \
     --name wallos-dev \
@@ -53,7 +53,7 @@ wallos-dev-stop:
   @echo "💾 Data preserved in volumes: wallos-dev-db, wallos-dev-logos"
 
 # Clean restart of Wallos dev instance (preserves data)
-wallos-dev-restart: wallos-dev-stop wallos-dev
+wallos-dev-restart: wallos-dev-stop wallos-dev-start
 
 # Reset Wallos dev instance (removes all data)
 wallos-dev-reset:
@@ -61,7 +61,20 @@ wallos-dev-reset:
   -docker stop wallos-dev
   -docker volume rm wallos-dev-db wallos-dev-logos
   @echo "🗑️  All Wallos dev data removed"
-  @echo "🚀 Run 'just wallos-dev' to start fresh"
+  @echo "🚀 Run 'just wallos-dev-start' to start fresh"
+
+# Reset Wallos dev instance with dev database template
+wallos-dev-reset-with-template:
+  @echo "⚠️  Resetting Wallos dev instance with dev database template..."
+  -docker stop wallos-dev
+  -docker volume rm wallos-dev-db wallos-dev-logos
+  docker run -d --name wallos-dev --rm -p 8285:80 -v wallos-dev-db:/var/www/html/db -v wallos-dev-logos:/var/www/html/images/uploads/logos wallos:latest
+  @sleep 3
+  docker cp wallos.dev.db wallos-dev:/var/www/html/db/wallos.db
+  docker restart wallos-dev
+  @echo "✅ Wallos dev instance reset with template data"
+  @echo "🗄️  Template database restored"
+  @echo "📝 Use 'just wallos-dev-stop' to stop and cleanup"
 
 # Format code with Prettier and other formatters
 fmt:
@@ -166,7 +179,7 @@ package:
   bun pack
   @echo "Package created successfully"
 
-# Run GitHub Super-Linter locally - focused on relevant linters for this project  
+# Run GitHub Super-Linter locally - focused on relevant linters for this project
 superlint:
   @echo "Running Super-Linter with relevant linters for TypeScript/Node.js project..."
   docker run --rm \
