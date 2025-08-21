@@ -31,13 +31,20 @@ docker-run:
     --name wallos-mcp \
     wallos-mcp:latest
 
-# Format code with Prettier
+# Format code with Prettier and other formatters
 fmt:
   bun run format
+  @echo "Formatting with Prettier..."
+  bunx markdownlint-cli --fix '**/*.md' --ignore node_modules --ignore dist || echo "No markdown files to fix"
+  @echo "All formatting complete!"
 
-# Lint code with ESLint
+# Comprehensive linting with all available linters
 lint:
+  @echo "Running comprehensive linting..."
   bun run lint
+  bun run typecheck
+  bunx markdownlint-cli '**/*.md' --ignore node_modules --ignore dist
+  @echo "ESLint, TypeScript, and Markdown linting complete!"
 
 # Run tests
 test:
@@ -66,8 +73,11 @@ watch:
 test-tool TOOL:
   bunx @modelcontextprotocol/cli test --tool {{TOOL}}
 
-# Run all quality checks
+# Run all quality checks (fast local checks)
 check: typecheck lint test
+
+# Run comprehensive quality checks (includes Super-Linter)
+check-all: check superlint
 
 # Setup development environment
 setup:
@@ -124,28 +134,95 @@ package:
   bun pack
   @echo "Package created successfully"
 
-# Run GitHub Super-Linter locally - comprehensive check (requires Docker)
+# Run GitHub Super-Linter locally - comprehensive check with ALL linters (requires Docker)
 superlint:
+  @echo "Running Super-Linter with ALL linters enabled (comprehensive check)..."
   docker run --rm \
     -e RUN_LOCAL=true \
     -e DEFAULT_BRANCH=main \
     -e VALIDATE_ALL_CODEBASE=true \
-    -e VALIDATE_JAVASCRIPT_ES=true \
-    -e VALIDATE_TYPESCRIPT_ES=true \
-    -e VALIDATE_JSON=true \
-    -e VALIDATE_YAML=true \
-    -e VALIDATE_MARKDOWN=true \
-    -e VALIDATE_DOCKERFILE_HADOLINT=true \
+    -e VALIDATE_ANSIBLE=true \
+    -e VALIDATE_ARM=true \
     -e VALIDATE_BASH=true \
+    -e VALIDATE_BASH_EXEC=true \
+    -e VALIDATE_CLANG_FORMAT=true \
+    -e VALIDATE_CLOUDFORMATION=true \
+    -e VALIDATE_CLOJURE=true \
+    -e VALIDATE_COFFEESCRIPT=true \
+    -e VALIDATE_CPP=true \
+    -e VALIDATE_CSHARP=true \
+    -e VALIDATE_CSS=true \
+    -e VALIDATE_DART=true \
+    -e VALIDATE_DOCKERFILE_HADOLINT=true \
+    -e VALIDATE_EDITORCONFIG=true \
     -e VALIDATE_ENV=true \
+    -e VALIDATE_GHERKIN=true \
     -e VALIDATE_GITHUB_ACTIONS=true \
+    -e VALIDATE_GITLEAKS=true \
+    -e VALIDATE_GO=true \
+    -e VALIDATE_GOOGLE_JAVA_FORMAT=true \
+    -e VALIDATE_GROOVY=true \
+    -e VALIDATE_HTML=true \
+    -e VALIDATE_JAVA=true \
+    -e VALIDATE_JAVASCRIPT_ES=true \
+    -e VALIDATE_JAVASCRIPT_STANDARD=true \
+    -e VALIDATE_JSCPD=true \
+    -e VALIDATE_JSON=true \
+    -e VALIDATE_JSONC=true \
+    -e VALIDATE_JSX=true \
+    -e VALIDATE_KUBERNETES_KUBECONFORM=true \
+    -e VALIDATE_KOTLIN=true \
+    -e VALIDATE_KOTLIN_ANDROID=true \
+    -e VALIDATE_LATEX=true \
+    -e VALIDATE_LUA=true \
+    -e VALIDATE_MARKDOWN=true \
+    -e VALIDATE_NATURAL_LANGUAGE=true \
+    -e VALIDATE_OPENAPI=true \
+    -e VALIDATE_PERL=true \
+    -e VALIDATE_PHP_BUILTIN=true \
+    -e VALIDATE_PHP_PHPCS=true \
+    -e VALIDATE_PHP_PHPSTAN=true \
+    -e VALIDATE_PHP_PSALM=true \
+    -e VALIDATE_POWERSHELL=true \
+    -e VALIDATE_PROTOBUF=true \
+    -e VALIDATE_PYTHON_BLACK=true \
+    -e VALIDATE_PYTHON_PYLINT=true \
+    -e VALIDATE_PYTHON_FLAKE8=true \
+    -e VALIDATE_PYTHON_ISORT=true \
+    -e VALIDATE_PYTHON_MYPY=true \
+    -e VALIDATE_R=true \
+    -e VALIDATE_RAKU=true \
+    -e VALIDATE_RUBY=true \
+    -e VALIDATE_RUST_2015=true \
+    -e VALIDATE_RUST_2018=true \
+    -e VALIDATE_RUST_2021=true \
+    -e VALIDATE_RUST_CLIPPY=true \
+    -e VALIDATE_SCALAFMT=true \
+    -e VALIDATE_SHELL_SHFMT=true \
+    -e VALIDATE_SNAKEMAKE_LINT=true \
+    -e VALIDATE_SNAKEMAKE_SNAKEFMT=true \
+    -e VALIDATE_STATES=true \
+    -e VALIDATE_SQL=true \
+    -e VALIDATE_SQLFLUFF=true \
+    -e VALIDATE_TEKTON=true \
+    -e VALIDATE_TERRAFORM_FMT=true \
+    -e VALIDATE_TERRAFORM_TFLINT=true \
+    -e VALIDATE_TERRAFORM_TERRASCAN=true \
+    -e VALIDATE_TERRAGRUNT=true \
+    -e VALIDATE_TSX=true \
+    -e VALIDATE_TYPESCRIPT_ES=true \
+    -e VALIDATE_TYPESCRIPT_STANDARD=true \
+    -e VALIDATE_XML=true \
+    -e VALIDATE_YAML=true \
     -e VALIDATE_PRETTIER=true \
     -e PRETTIER_CONFIG_FILE=.prettierrc \
     -e FILTER_REGEX_EXCLUDE=".*dist/.*|.*node_modules/.*|.*coverage/.*" \
-    -e LOG_LEVEL=INFO \
-    -e CREATE_LOG_FILE=false \
+    -e LOG_LEVEL=DEBUG \
+    -e CREATE_LOG_FILE=true \
     -e DISABLE_ERRORS=false \
-    -e MULTI_STATUS=false \
+    -e MULTI_STATUS=true \
+    -e PRINT_FIXES=true \
+    -e SHOW_SKIPPED_PATHS_ON_SUMMARY=true \
     -v "$(pwd)":/tmp/lint \
     -w /tmp/lint \
     github/super-linter:v5

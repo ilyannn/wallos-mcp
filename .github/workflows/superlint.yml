@@ -31,17 +31,83 @@ jobs:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-          # Linter on/off switches
-          VALIDATE_ALL_CODEBASE: false # Only lint changed files on PRs
-          VALIDATE_JAVASCRIPT_ES: true
-          VALIDATE_TYPESCRIPT_ES: true
-          VALIDATE_JSON: true
-          VALIDATE_YAML: true
-          VALIDATE_MARKDOWN: true
-          VALIDATE_DOCKERFILE_HADOLINT: true
+          # Validation mode (full codebase on main, changed files on PRs)
+          VALIDATE_ALL_CODEBASE: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+          # Enable ALL available linters (comprehensive quality checks)
+          VALIDATE_ANSIBLE: true
+          VALIDATE_ARM: true
           VALIDATE_BASH: true
+          VALIDATE_BASH_EXEC: true
+          VALIDATE_CLANG_FORMAT: true
+          VALIDATE_CLOUDFORMATION: true
+          VALIDATE_CLOJURE: true
+          VALIDATE_COFFEESCRIPT: true
+          VALIDATE_CPP: true
+          VALIDATE_CSHARP: true
+          VALIDATE_CSS: true
+          VALIDATE_DART: true
+          VALIDATE_DOCKERFILE_HADOLINT: true
+          VALIDATE_EDITORCONFIG: true
           VALIDATE_ENV: true
+          VALIDATE_GHERKIN: true
           VALIDATE_GITHUB_ACTIONS: true
+          VALIDATE_GITLEAKS: true
+          VALIDATE_GO: true
+          VALIDATE_GOOGLE_JAVA_FORMAT: true
+          VALIDATE_GROOVY: true
+          VALIDATE_HTML: true
+          VALIDATE_JAVA: true
+          VALIDATE_JAVASCRIPT_ES: true
+          VALIDATE_JAVASCRIPT_STANDARD: true
+          VALIDATE_JSCPD: true
+          VALIDATE_JSON: true
+          VALIDATE_JSONC: true
+          VALIDATE_JSX: true
+          VALIDATE_KUBERNETES_KUBECONFORM: true
+          VALIDATE_KOTLIN: true
+          VALIDATE_KOTLIN_ANDROID: true
+          VALIDATE_LATEX: true
+          VALIDATE_LUA: true
+          VALIDATE_MARKDOWN: true
+          VALIDATE_NATURAL_LANGUAGE: true
+          VALIDATE_OPENAPI: true
+          VALIDATE_PERL: true
+          VALIDATE_PHP_BUILTIN: true
+          VALIDATE_PHP_PHPCS: true
+          VALIDATE_PHP_PHPSTAN: true
+          VALIDATE_PHP_PSALM: true
+          VALIDATE_POWERSHELL: true
+          VALIDATE_PROTOBUF: true
+          VALIDATE_PYTHON_BLACK: true
+          VALIDATE_PYTHON_PYLINT: true
+          VALIDATE_PYTHON_FLAKE8: true
+          VALIDATE_PYTHON_ISORT: true
+          VALIDATE_PYTHON_MYPY: true
+          VALIDATE_R: true
+          VALIDATE_RAKU: true
+          VALIDATE_RUBY: true
+          VALIDATE_RUST_2015: true
+          VALIDATE_RUST_2018: true
+          VALIDATE_RUST_2021: true
+          VALIDATE_RUST_CLIPPY: true
+          VALIDATE_SCALAFMT: true
+          VALIDATE_SHELL_SHFMT: true
+          VALIDATE_SNAKEMAKE_LINT: true
+          VALIDATE_SNAKEMAKE_SNAKEFMT: true
+          VALIDATE_STATES: true
+          VALIDATE_SQL: true
+          VALIDATE_SQLFLUFF: true
+          VALIDATE_TEKTON: true
+          VALIDATE_TERRAFORM_FMT: true
+          VALIDATE_TERRAFORM_TFLINT: true
+          VALIDATE_TERRAFORM_TERRASCAN: true
+          VALIDATE_TERRAGRUNT: true
+          VALIDATE_TSX: true
+          VALIDATE_TYPESCRIPT_ES: true
+          VALIDATE_TYPESCRIPT_STANDARD: true
+          VALIDATE_XML: true
+          VALIDATE_YAML: true
 
           # Prettier for formatting checks
           VALIDATE_PRETTIER: true
@@ -50,11 +116,10 @@ jobs:
           # File filters
           FILTER_REGEX_EXCLUDE: .*dist/.*|.*node_modules/.*|.*coverage/.*
 
-          # Output
-          LINTER_RULES_PATH: /
-          LOG_LEVEL: INFO
-          CREATE_LOG_FILE: false
-
-          # Behavior
-          DISABLE_ERRORS: false # Set to true for warnings only
-          MULTI_STATUS: true # Post individual status for each linter
+          # Verbose output and debugging
+          LOG_LEVEL: DEBUG
+          CREATE_LOG_FILE: true
+          DISABLE_ERRORS: false
+          MULTI_STATUS: true
+          PRINT_FIXES: true
+          SHOW_SKIPPED_PATHS_ON_SUMMARY: true

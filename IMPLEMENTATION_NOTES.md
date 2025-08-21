@@ -2,7 +2,8 @@
 
 ## Session Pickup Guide
 
-This document contains key information for continuing development of the Wallos MCP server in a new session.
+This document contains key information for continuing development of the Wallos
+MCP server in a new session.
 
 ## Current Status
 
@@ -171,7 +172,7 @@ When picking up in a new session:
 ## Wallos Instance Details
 
 - Default port: 8282
-- Default path: http://localhost:8282
+- Default path: <http://localhost:8282>
 - Database: SQLite at `db/wallos.db`
 - Session timeout: Configurable
 - API pattern: RESTful with GET parameters
@@ -179,7 +180,7 @@ When picking up in a new session:
 ## Resources
 
 - Wallos source: `/Users/in/Code/Wallos`
-- MCP docs: https://modelcontextprotocol.io
+- MCP docs: <https://modelcontextprotocol.io>
 - Wallos endpoints: `/Users/in/Code/Wallos/endpoints/`
 
 ---
