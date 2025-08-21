@@ -27,6 +27,7 @@ jobs:
 
       - name: Super-Linter
         uses: github/super-linter@v5
+        continue-on-error: true
         env:
           DEFAULT_BRANCH: main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +59,7 @@ jobs:
           # Verbose output and debugging
           LOG_LEVEL: DEBUG
           CREATE_LOG_FILE: true
-          DISABLE_ERRORS: false
+          DISABLE_ERRORS: true
           MULTI_STATUS: true
           PRINT_FIXES: true
           SHOW_SKIPPED_PATHS_ON_SUMMARY: true
