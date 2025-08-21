@@ -68,23 +68,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
 // Test connection on startup
 async function testConnection(): Promise<void> {
-  // eslint-disable-next-line no-console
-  console.log('Testing Wallos API connection...');
+  process.stderr.write('Testing Wallos API connection...\n');
   try {
     const isConnected = await wallosClient.testConnection();
     if (isConnected) {
-      // eslint-disable-next-line no-console
-      console.log('✅ Successfully connected to Wallos API');
+      process.stderr.write('✅ Successfully connected to Wallos API\n');
     } else {
-      // eslint-disable-next-line no-console
-      console.warn('⚠️  Warning: Could not verify Wallos API connection');
+      process.stderr.write('⚠️  Warning: Could not verify Wallos API connection\n');
     }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    // eslint-disable-next-line no-console
-    console.error('❌ Error connecting to Wallos API:', errorMessage);
-    // eslint-disable-next-line no-console
-    console.error('Please check your WALLOS_URL and WALLOS_API_KEY environment variables');
+    process.stderr.write(`❌ Error connecting to Wallos API: ${errorMessage}\n`);
+    process.stderr.write('Please check your WALLOS_URL and WALLOS_API_KEY environment variables\n');
   }
 }
 
@@ -96,45 +91,37 @@ async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
 
-  // eslint-disable-next-line no-console
-  console.log('Wallos MCP server started successfully');
-  // eslint-disable-next-line no-console
-  console.log(`Wallos URL: ${WALLOS_URL}`);
-  // eslint-disable-next-line no-console
-  console.log('Available tools: get_master_data');
+  process.stderr.write('Wallos MCP server started successfully\n');
+  process.stderr.write(`Wallos URL: ${WALLOS_URL}\n`);
+  process.stderr.write('Available tools: get_master_data\n');
 }
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
-  // eslint-disable-next-line no-console
-  console.log('Shutting down Wallos MCP server...');
+  process.stderr.write('Shutting down Wallos MCP server...\n');
   await server.close();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  // eslint-disable-next-line no-console
-  console.log('Shutting down Wallos MCP server...');
+  process.stderr.write('Shutting down Wallos MCP server...\n');
   await server.close();
   process.exit(0);
 });
 
 // Error handling
 process.on('uncaughtException', (error) => {
-  // eslint-disable-next-line no-console
-  console.error('Uncaught exception:', error);
+  process.stderr.write(`Uncaught exception: ${error}\n`);
   process.exit(1);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  // eslint-disable-next-line no-console
-  console.error('Unhandled rejection at:', promise, 'reason:', reason);
+  process.stderr.write(`Unhandled rejection at: ${promise}, reason: ${reason}\n`);
   process.exit(1);
 });
 
 // Start the server
 main().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Failed to start server:', error);
+  process.stderr.write(`Failed to start server: ${error}\n`);
   process.exit(1);
 });

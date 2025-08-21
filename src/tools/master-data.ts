@@ -14,8 +14,7 @@ export const getMasterDataTool: Tool = {
 
 export async function handleGetMasterData(wallosClient: WallosClient): Promise<string> {
   try {
-    // eslint-disable-next-line no-console
-    console.log('Fetching master data from Wallos API...');
+    process.stderr.write('Fetching master data from Wallos API...\n');
 
     const masterData = await wallosClient.getMasterData();
 
@@ -31,16 +30,14 @@ export async function handleGetMasterData(wallosClient: WallosClient): Promise<s
       data: masterData,
     };
 
-    // eslint-disable-next-line no-console
-    console.log(
-      `Successfully retrieved master data: ${response.summary.categories_count} categories, ${response.summary.currencies_count} currencies, ${response.summary.payment_methods_count} payment methods, ${response.summary.household_members_count} household members`,
+    process.stderr.write(
+      `Successfully retrieved master data: ${response.summary.categories_count} categories, ${response.summary.currencies_count} currencies, ${response.summary.payment_methods_count} payment methods, ${response.summary.household_members_count} household members\n`,
     );
 
     return JSON.stringify(response, null, 2);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-    // eslint-disable-next-line no-console
-    console.error('Error fetching master data:', errorMessage);
+    process.stderr.write(`Error fetching master data: ${errorMessage}\n`);
 
     return JSON.stringify(
       {
