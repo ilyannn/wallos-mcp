@@ -98,7 +98,7 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -123,11 +123,11 @@ jobs:
             find . -name "*.env" -not -path "./node_modules/*" -not -name ".env.example"
             exit 1
           fi
-          
+
           if find . -name "*.key" -o -name "*.pem" -o -name "*.p12" | grep -q .; then
             echo "❌ Found potential secret files"
             find . -name "*.key" -o -name "*.pem" -o -name "*.p12"
             exit 1
           fi
-          
+
           echo "✅ No sensitive files found"

@@ -68,10 +68,10 @@ jobs:
       - name: Test Docker Image (Local)
         run: |
           echo "Testing locally built Docker image..."
-          
+
           # Build image for testing
           docker build -t wallos-mcp-test .
-          
+
           # Test basic container functionality
           echo "Testing container startup..."
           timeout 10s docker run --rm wallos-mcp-test || if [ $? -eq 124 ]; then
@@ -80,11 +80,11 @@ jobs:
             echo "❌ Container failed to start"
             exit 1
           fi
-          
+
           # Test that the built files exist
           echo "Testing built files in container..."
           docker run --rm wallos-mcp-test ls -la dist/
-          
+
           # Test Node.js can load the built file
           echo "Testing Node.js compatibility in container..."
           docker run --rm wallos-mcp-test node -e "
@@ -154,7 +154,7 @@ jobs:
       - name: Test Container with Environment
         run: |
           echo "Testing container with environment variables..."
-          
+
           # Test that container accepts environment variables
           timeout 5s docker run --rm --env-file test.env wallos-mcp-integration || if [ $? -eq 124 ]; then
             echo "✅ Container started with environment variables (timed out as expected)"
@@ -166,7 +166,7 @@ jobs:
       - name: Test Container Resource Limits
         run: |
           echo "Testing container with resource limits..."
-          
+
           # Test container with memory and CPU limits
           timeout 5s docker run --rm \
             --memory=128m \
@@ -182,7 +182,7 @@ jobs:
       - name: Test Container as Non-Root
         run: |
           echo "Testing container security (non-root user)..."
-          
+
           # Verify container runs as non-root user
           USER_CHECK=$(docker run --rm wallos-mcp-integration id -u)
           if [ "$USER_CHECK" != "0" ]; then
