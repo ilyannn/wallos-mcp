@@ -11,6 +11,7 @@ Wallos MCP Server is a Model Context Protocol server that enables Claude Desktop
 Use the `just` command runner for all development tasks:
 
 ### Core Development
+
 - `just setup` - Initial project setup (install deps, create .env)
 - `just start` - Start development server with auto-reload
 - `just dev` - Alias for start
@@ -19,6 +20,7 @@ Use the `just` command runner for all development tasks:
 - `just check` - Run all quality checks (typecheck, lint, test)
 
 ### Code Quality
+
 - `just lint` - Comprehensive linting (ESLint + TypeScript + Markdown)
 - `just fmt` - Format code (Prettier + markdownlint)
 - `just typecheck` - TypeScript type checking without building
@@ -26,16 +28,19 @@ Use the `just` command runner for all development tasks:
 - `just superlint-verbose` - Comprehensive Super Linter with debug output
 
 ### Docker Operations
+
 - `just docker-build` - Build Docker image
 - `just docker-run` - Run MCP server in Docker
 - `just docker` - Combined build and run
 
 ### Testing & Debugging
+
 - `just test-tool TOOL` - Test specific MCP tool
 - `just debug` - Start with debug logging
 - `just smoke-test` - Quick build verification
 
-### Utilities  
+### Utilities
+
 - `just clean` - Remove build artifacts
 - `just rebuild` - Full clean, install, build cycle
 - `just update-deps` - Update and audit dependencies
@@ -44,6 +49,7 @@ Use the `just` command runner for all development tasks:
 ## Architecture
 
 ### Tech Stack
+
 - **Runtime**: Bun (fast JavaScript runtime)
 - **Language**: TypeScript
 - **Framework**: Model Context Protocol SDK
@@ -53,6 +59,7 @@ Use the `just` command runner for all development tasks:
 - **CI/CD**: GitHub Actions with multi-platform Docker builds
 
 ### Project Structure
+
 ```
 src/
 ├── index.ts              # MCP server entry point
@@ -78,18 +85,23 @@ src/
 
 ### GitHub Actions Workflows
 
-1. **Test Suite** (`.github/workflows/test.yml`)
-   - Matrix testing: Node.js 18, 20, 22
-   - Steps: Install → Lint → Format → Typecheck → Test → Build
+1. **Code Quality & Linting** (`.github/workflows/lint.yml`)
+   - Steps: Install → Typecheck → Lint → Format Check → Security Audit
+   - Fast feedback on code quality issues
    - Triggers: Push to main, PRs, manual dispatch
 
-2. **Docker Build & Test** (`.github/workflows/docker.yml`)
+2. **Test & Build** (`.github/workflows/test.yml`)
+   - Matrix testing: Node.js 18, 20, 22 (compatibility)
+   - Steps: Install → Test → Build → Verify
+   - Triggers: Push to main, PRs, manual dispatch
+
+3. **Docker Build & Test** (`.github/workflows/docker.yml`)
    - Multi-platform builds (linux/amd64, linux/arm64)
    - Security scanning with Trivy
    - Integration testing with resource limits
    - Automatic publishing to GitHub Container Registry
 
-3. **Super Linter** (`.github/workflows/superlint.yml`)
+4. **Super Linter** (`.github/workflows/superlint.yml`)
    - Project-relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
    - Smart validation: Full codebase on main, changed files on PRs
    - Consistent with local `just superlint` configuration
@@ -97,6 +109,7 @@ src/
 ### Quality Assurance Strategy
 
 **Local Development**:
+
 ```bash
 just lint    # Fast comprehensive linting
 just fmt     # Auto-formatting
@@ -104,6 +117,7 @@ just check   # All quality checks before commit
 ```
 
 **CI/CD**:
+
 - Automated quality checks on every push and PR
 - Security vulnerability scanning for Docker images
 - Multi-Node.js version compatibility testing
@@ -124,7 +138,7 @@ just check   # All quality checks before commit
 ```bash
 # Required for MCP server
 WALLOS_URL=http://localhost:8282
-WALLOS_USERNAME=your_username  
+WALLOS_USERNAME=your_username
 WALLOS_PASSWORD=your_password
 
 # Optional
@@ -144,7 +158,7 @@ SESSION_TIMEOUT=3600000
 
 - Credentials stored in environment variables only
 - Session-based authentication with Wallos
-- Input validation on all tool parameters  
+- Input validation on all tool parameters
 - No direct database access (API-only communication)
 - Non-root Docker container execution
 - Security scanning in CI/CD pipeline

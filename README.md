@@ -196,8 +196,9 @@ wallos-mcp/
 
 ### GitHub Actions Workflows
 
-- **Test Suite**: Multi-Node.js testing (18, 20, 22) with comprehensive linting
-- **Docker Build**: Multi-platform builds with security scanning  
+- **Code Quality & Linting**: TypeScript checking, ESLint, Prettier formatting, security audits
+- **Test & Build**: Unit testing and build verification with Node.js compatibility (18, 20, 22)
+- **Docker Build**: Multi-platform builds with security scanning
 - **Super Linter**: Comprehensive code quality checks with 10+ linters
 - **Automatic Publishing**: Docker images to GitHub Container Registry
 

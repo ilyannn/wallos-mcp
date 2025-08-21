@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
   packages: write
-  security-events: write  # Required for uploading security scan results
+  security-events: write # Required for uploading security scan results
 
 env:
   REGISTRY: ghcr.io
@@ -120,7 +120,7 @@ jobs:
       - name: Upload Trivy Results to GitHub Security
         uses: github/codeql-action/upload-sarif@v3
         if: always()
-        continue-on-error: true  # Don't fail workflow if upload fails
+        continue-on-error: true # Don't fail workflow if upload fails
         with:
           sarif_file: 'trivy-results.sarif'
 

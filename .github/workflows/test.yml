@@ -1,4 +1,4 @@
-name: Test Suite
+name: Test & Build
 
 on:
   push:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   test:
-    name: Run Tests
+    name: Test & Build
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -31,15 +31,6 @@ jobs:
 
       - name: Install Dependencies
         run: bun install --frozen-lockfile
-
-      - name: Type Check
-        run: bun run typecheck
-
-      - name: Lint Code
-        run: bun run lint
-
-      - name: Format Check
-        run: bun run format:check
 
       - name: Run Tests
         run: bun test
@@ -94,40 +85,3 @@ jobs:
               process.exit(1);
             }
           "
-
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install Dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Security Audit
-        run: |
-          echo "Running security audit..."
-          bun audit || echo "⚠️  Audit found issues - review manually"
-          echo "✅ Security audit completed"
-
-      - name: Check for Sensitive Files
-        run: |
-          echo "Checking for sensitive files..."
-          if find . -name "*.env" -not -path "./node_modules/*" -not -name ".env.example" | grep -q .; then
-            echo "❌ Found .env files that should not be committed"
-            find . -name "*.env" -not -path "./node_modules/*" -not -name ".env.example"
-            exit 1
-          fi
-
-          if find . -name "*.key" -o -name "*.pem" -o -name "*.p12" | grep -q .; then
-            echo "❌ Found potential secret files"
-            find . -name "*.key" -o -name "*.pem" -o -name "*.p12"
-            exit 1
-          fi
-
-          echo "✅ No sensitive files found"

@@ -201,19 +201,24 @@ bunx @modelcontextprotocol/cli test --tool list_subscriptions
 
 ### GitHub Actions Workflows
 
-1. **Test Suite** (`.github/workflows/test.yml`)
+1. **Code Quality & Linting** (`.github/workflows/lint.yml`)
    - Runs on: Push to main, PRs, manual dispatch
-   - Node.js versions: 18, 20, 22
-   - Steps: Install → Lint → Format → Typecheck → Test → Build
+   - Steps: Install → Typecheck → Lint → Format Check → Security Audit
+   - Fast feedback on code quality issues
+
+2. **Test & Build** (`.github/workflows/test.yml`)
+   - Runs on: Push to main, PRs, manual dispatch
+   - Node.js versions: 18, 20, 22 (compatibility testing)
+   - Steps: Install → Test → Build → Verify
    - Uses Bun for fast execution
 
-2. **Docker Build & Test** (`.github/workflows/docker.yml`)
+3. **Docker Build & Test** (`.github/workflows/docker.yml`)
    - Multi-platform builds (linux/amd64, linux/arm64)
    - Security scanning with Trivy
    - Integration tests for containers
    - Automatic GHCR publishing
 
-3. **Super Linter** (`.github/workflows/superlint.yml`)
+4. **Super Linter** (`.github/workflows/superlint.yml`)
    - Comprehensive code quality checks
    - Relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
    - Smart validation: Full codebase on main, changed files on PRs
