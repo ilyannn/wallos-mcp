@@ -21,16 +21,18 @@ const WALLOS_API_KEY = process.env.WALLOS_API_KEY;
 const WALLOS_USERNAME = process.env.WALLOS_USERNAME;
 const WALLOS_PASSWORD = process.env.WALLOS_PASSWORD;
 
-if (!WALLOS_API_KEY) {
+if (!WALLOS_API_KEY && (!WALLOS_USERNAME || !WALLOS_PASSWORD)) {
   // eslint-disable-next-line no-console
-  console.error('Error: WALLOS_API_KEY environment variable is required');
+  console.error(
+    'Error: Either WALLOS_API_KEY or both WALLOS_USERNAME and WALLOS_PASSWORD are required',
+  );
   process.exit(1);
 }
 
 // Create Wallos client
 const wallosClient = new WallosClient({
   baseUrl: WALLOS_URL,
-  apiKey: WALLOS_API_KEY,
+  apiKey: WALLOS_API_KEY || undefined,
   username: WALLOS_USERNAME,
   password: WALLOS_PASSWORD,
   timeout: 30000, // 30 second timeout
@@ -126,14 +128,24 @@ async function main(): Promise<void> {
   process.stderr.write('Wallos MCP server started successfully\n');
   process.stderr.write(`Wallos URL: ${WALLOS_URL}\n`);
 
-  if (WALLOS_USERNAME && WALLOS_PASSWORD) {
+  if (WALLOS_API_KEY) {
+    process.stderr.write(
+      'Available tools: get_master_data' +
+        (WALLOS_USERNAME && WALLOS_PASSWORD
+          ? ', add_category, update_category, delete_category'
+          : '') +
+        '\n',
+    );
+    process.stderr.write(
+      WALLOS_USERNAME && WALLOS_PASSWORD
+        ? 'Full access enabled (API key + session credentials)\n'
+        : 'Read-only access (API key only)\n',
+    );
+  } else if (WALLOS_USERNAME && WALLOS_PASSWORD) {
     process.stderr.write(
       'Available tools: get_master_data, add_category, update_category, delete_category\n',
     );
-    process.stderr.write('Mutation operations enabled (session credentials provided)\n');
-  } else {
-    process.stderr.write('Available tools: get_master_data\n');
-    process.stderr.write('Read-only mode (no session credentials provided)\n');
+    process.stderr.write('Full access enabled (username/password - API key will be retrieved)\n');
   }
 }
 

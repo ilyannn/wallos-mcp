@@ -15,13 +15,17 @@ import {
 
 export class WallosClient {
   private client: AxiosInstance;
-  private apiKey: string;
+  private apiKey?: string;
   private username?: string;
   private password?: string;
   private session?: SessionInfo;
   private cookieJar: tough.CookieJar;
 
   constructor(config: WallosClientConfig) {
+    if (!config.apiKey && (!config.username || !config.password)) {
+      throw new Error('Either apiKey or both username and password must be provided');
+    }
+
     this.apiKey = config.apiKey;
     this.username = config.username;
     this.password = config.password;
@@ -42,12 +46,16 @@ export class WallosClient {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (this.client as any).defaults.jar = this.cookieJar;
 
-    // Add request interceptor to include API key
-    this.client.interceptors.request.use((config) => {
-      if (config.method === 'get') {
-        config.params = { ...config.params, api_key: this.apiKey };
-      } else {
-        config.data = { ...config.data, api_key: this.apiKey };
+    // Add request interceptor to include API key (when available)
+    this.client.interceptors.request.use(async (config) => {
+      // Ensure we have an API key for API endpoints
+      if (config.url && config.url.startsWith('/api/')) {
+        await this.ensureApiKey();
+        if (config.method === 'get') {
+          config.params = { ...config.params, api_key: this.apiKey };
+        } else {
+          config.data = { ...config.data, api_key: this.apiKey };
+        }
       }
       return config;
     });
@@ -206,6 +214,37 @@ export class WallosClient {
         throw new Error(`Authentication failed: ${error.message}`);
       }
       throw error;
+    }
+  }
+
+  /**
+   * Ensure we have an API key (retrieve it if needed)
+   */
+  private async ensureApiKey(): Promise<void> {
+    if (this.apiKey) {
+      return; // Already have API key
+    }
+
+    if (!this.username || !this.password) {
+      throw new Error('API key or username/password required for API access');
+    }
+
+    // Authenticate with session to retrieve API key
+    await this.ensureSession();
+
+    // Generate a new API key using the regenerate endpoint
+    try {
+      const response = await this.client.post('/endpoints/user/regenerateapikey.php', {});
+      if (response.data && response.data.success && response.data.apiKey) {
+        this.apiKey = response.data.apiKey;
+        process.stderr.write('Successfully retrieved API key from Wallos\n');
+      } else {
+        throw new Error('Failed to generate API key from server');
+      }
+    } catch (error) {
+      throw new Error(
+        `Failed to obtain API key: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      );
     }
   }
 

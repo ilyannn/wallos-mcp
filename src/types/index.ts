@@ -98,7 +98,7 @@ export interface WallosError {
 
 export interface WallosClientConfig {
   baseUrl: string;
-  apiKey: string;
+  apiKey?: string;
   username?: string;
   password?: string;
   timeout?: number;

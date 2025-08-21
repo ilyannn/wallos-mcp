@@ -91,6 +91,26 @@ describe('WallosClient', () => {
         withCredentials: true,
       });
     });
+
+    test('should throw error when neither API key nor credentials provided', () => {
+      const invalidConfig = {
+        baseUrl: 'http://localhost:8282',
+      };
+      
+      expect(() => new WallosClient(invalidConfig)).toThrow(
+        'Either apiKey or both username and password must be provided'
+      );
+    });
+
+    test('should work with only username and password', () => {
+      const configWithPassword = {
+        baseUrl: 'http://localhost:8282',
+        username: 'test-user',
+        password: 'test-pass',
+      };
+      
+      expect(() => new WallosClient(configWithPassword)).not.toThrow();
+    });
   });
 
   describe('getCategories', () => {
