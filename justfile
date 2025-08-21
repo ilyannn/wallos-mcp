@@ -6,11 +6,11 @@ default:
 
 # Install dependencies
 install:
-  npm install
+  bun install
 
 # Build TypeScript project
 build:
-  npm run build
+  bun run build
 
 # Build Docker image
 docker-build:
@@ -18,11 +18,11 @@ docker-build:
 
 # Start the MCP server locally (development)
 start:
-  npm run dev
+  bun run dev
 
 # Start the MCP server (production)
 start-prod:
-  npm run start
+  bun run start
 
 # Run the MCP server in Docker
 docker-run:
@@ -33,19 +33,19 @@ docker-run:
 
 # Format code with Prettier
 fmt:
-  npm run format
+  bun run format
 
 # Lint code with ESLint
 lint:
-  npm run lint
+  bun run lint
 
 # Run tests
 test:
-  npm test
+  bun test
 
 # Run tests with coverage
 test-coverage:
-  npm run test -- --coverage
+  bun run test -- --coverage
 
 # Clean build artifacts
 clean:
@@ -56,15 +56,15 @@ rebuild: clean install build
 
 # Check types without building
 typecheck:
-  npx tsc --noEmit
+  bunx tsc --noEmit
 
 # Watch mode for development
 watch:
-  npm run dev
+  bun run dev
 
 # Test a specific MCP tool
 test-tool TOOL:
-  npx @modelcontextprotocol/cli test --tool {{TOOL}}
+  bunx @modelcontextprotocol/cli test --tool {{TOOL}}
 
 # Run all quality checks
 check: typecheck lint test
@@ -73,7 +73,7 @@ check: typecheck lint test
 setup:
   cp .env.example .env
   @echo "Please edit .env with your Wallos credentials"
-  npm install
+  bun install
   @echo "Setup complete! Edit .env then run 'just start' to begin development"
 
 # Create a new tool file
@@ -85,15 +85,15 @@ new-tool NAME:
 
 # Run the MCP server with debug logging
 debug:
-  LOG_LEVEL=debug npm run dev
+  LOG_LEVEL=debug bun run dev
 
 # Build and run in Docker (combined)
 docker: docker-build docker-run
 
 # Update all dependencies
 update-deps:
-  npm update
-  npm audit fix
+  bun update
+  bun audit --fix
 
 # Show current environment configuration (without secrets)
 show-config:
@@ -114,14 +114,14 @@ generate-types:
 # Run a quick smoke test
 smoke-test:
   @echo "Running smoke test..."
-  npm run build
+  bun run build
   node -e "console.log('Build successful')"
   @echo "Smoke test passed!"
 
 # Package for distribution
 package:
-  npm run build
-  npm pack
+  bun run build
+  bun pack
   @echo "Package created successfully"
 
 # Run GitHub Super-Linter locally - comprehensive check (requires Docker)
@@ -140,8 +140,6 @@ superlint:
     -e VALIDATE_ENV=true \
     -e VALIDATE_GITHUB_ACTIONS=true \
     -e VALIDATE_PRETTIER=true \
-    -e JAVASCRIPT_ES_CONFIG_FILE=.eslintrc.json \
-    -e TYPESCRIPT_ES_CONFIG_FILE=.eslintrc.json \
     -e PRETTIER_CONFIG_FILE=.prettierrc \
     -e FILTER_REGEX_EXCLUDE=".*dist/.*|.*node_modules/.*|.*coverage/.*" \
     -e LOG_LEVEL=INFO \
@@ -149,6 +147,7 @@ superlint:
     -e DISABLE_ERRORS=false \
     -e MULTI_STATUS=false \
     -v "$(pwd)":/tmp/lint \
+    -w /tmp/lint \
     github/super-linter:v5
 
 # Run Super-Linter only on changed files (faster, for PRs)
@@ -168,14 +167,13 @@ superlint-pr:
     -e VALIDATE_ENV=true \
     -e VALIDATE_GITHUB_ACTIONS=true \
     -e VALIDATE_PRETTIER=true \
-    -e JAVASCRIPT_ES_CONFIG_FILE=.eslintrc.json \
-    -e TYPESCRIPT_ES_CONFIG_FILE=.eslintrc.json \
     -e PRETTIER_CONFIG_FILE=.prettierrc \
     -e FILTER_REGEX_EXCLUDE=".*dist/.*|.*node_modules/.*|.*coverage/.*" \
     -e LOG_LEVEL=INFO \
     -e CREATE_LOG_FILE=false \
     -e DISABLE_ERRORS=false \
     -v "$(pwd)":/tmp/lint \
+    -w /tmp/lint \
     github/super-linter:v5
 
 # Run Super-Linter with GitHub Actions configuration (test CI locally)
@@ -187,17 +185,17 @@ superlint-github:
 # Validate configuration files
 validate:
   @echo "Validating configuration files..."
-  npx jsonlint package.json
-  npx jsonlint tsconfig.json
+  bunx jsonlint package.json
+  bunx jsonlint tsconfig.json
   @echo "All configuration files are valid!"
 
 # Run development with auto-restart on changes
 dev:
-  npm run dev
+  bun run dev
 
 # Production build with optimizations
 build-prod:
-  NODE_ENV=production npm run build
+  NODE_ENV=production bun run build
 
 # Display project statistics
 stats:

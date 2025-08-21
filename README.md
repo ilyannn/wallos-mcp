@@ -19,35 +19,40 @@ This MCP server provides tools for managing subscriptions, categories, currencie
 ## Prerequisites
 
 - Wallos instance (self-hosted or Docker)
-- Node.js 18+ 
+- Bun runtime (https://bun.sh)
 - Claude Desktop
 - Wallos user credentials
 
 ## Installation
 
 1. Clone this repository:
+
 ```bash
 git clone https://github.com/yourusername/wallos-mcp.git
 cd wallos-mcp
 ```
 
 2. Install dependencies:
+
 ```bash
-npm install
+bun install
 ```
 
 3. Configure environment:
+
 ```bash
 cp .env.example .env
 # Edit .env with your Wallos instance details
 ```
 
 4. Build the project:
+
 ```bash
-npm run build
+bun run build
 ```
 
 5. Add to Claude Desktop config:
+
 ```json
 {
   "mcpServers": {
@@ -67,6 +72,7 @@ npm run build
 ## Implementation Plan
 
 ### Phase 1: Core Infrastructure ✅
+
 - [x] Repository setup
 - [ ] TypeScript configuration
 - [ ] MCP SDK integration
@@ -74,6 +80,7 @@ npm run build
 - [ ] Error handling and logging
 
 ### Phase 2: Subscription Management
+
 - [ ] `list_subscriptions` - View all subscriptions with filters
 - [ ] `add_subscription` - Create new subscription
 - [ ] `edit_subscription` - Modify existing subscription
@@ -83,12 +90,14 @@ npm run build
 - [ ] `toggle_subscription` - Enable/disable subscription
 
 ### Phase 3: Master Data Tools
+
 - [ ] `manage_categories` - CRUD operations for categories
 - [ ] `manage_payment_methods` - Add/edit/remove payment methods
 - [ ] `manage_currencies` - Currency management with exchange rates
 - [ ] `manage_household` - Household member operations
 
 ### Phase 4: Analytics & Insights
+
 - [ ] `get_statistics` - Spending statistics and trends
 - [ ] `upcoming_payments` - Next payment schedule
 - [ ] `spending_by_category` - Category breakdown
@@ -96,6 +105,7 @@ npm run build
 - [ ] `export_data` - Export subscriptions to CSV/JSON
 
 ### Phase 5: Advanced Features
+
 - [ ] `search_logos` - Find logos for subscriptions
 - [ ] `bulk_operations` - Mass update subscriptions
 - [ ] `notifications_status` - Check notification settings
@@ -105,6 +115,7 @@ npm run build
 ## Architecture
 
 ### Tech Stack
+
 - **Language**: TypeScript
 - **Runtime**: Node.js
 - **MCP SDK**: @modelcontextprotocol/sdk
@@ -113,6 +124,7 @@ npm run build
 - **Environment**: dotenv
 
 ### Project Structure
+
 ```
 wallos-mcp/
 ├── src/
@@ -150,6 +162,7 @@ wallos-mcp/
    - Handles session expiry and renewal
 
 2. **Request Flow**:
+
    ```
    Claude Desktop → MCP Tool → Wallos Client → Wallos API → SQLite DB
                           ↓                           ↓
@@ -171,28 +184,46 @@ wallos-mcp/
 
 ## Development
 
-### Setup Development Environment
+### Quick Start with Just
+
+```bash
+# Initial setup (installs deps, creates .env)
+just setup
+
+# Start development server
+just start
+
+# Run all quality checks
+just check
+
+# Build and test
+just build && just test
+```
+
+### Manual Setup
+
 ```bash
 # Install dependencies
-npm install
+bun install
 
 # Run in development mode
-npm run dev
+bun run dev
 
 # Run tests
-npm test
+bun test
 
 # Build for production
-npm run build
+bun run build
 ```
 
 ### Testing Tools Locally
+
 ```bash
 # Start local MCP server
-npm run start:local
+bun run start:local
 
 # Test with MCP client
-npx @modelcontextprotocol/cli test
+bunx @modelcontextprotocol/cli test
 ```
 
 ## Tool Reference
@@ -200,7 +231,9 @@ npx @modelcontextprotocol/cli test
 ### Subscription Tools
 
 #### list_subscriptions
+
 Lists all subscriptions with optional filters.
+
 ```typescript
 Parameters:
 - active_only?: boolean
@@ -209,7 +242,9 @@ Parameters:
 ```
 
 #### add_subscription
+
 Creates a new subscription.
+
 ```typescript
 Parameters:
 - name: string
@@ -225,7 +260,9 @@ Parameters:
 ```
 
 #### edit_subscription
+
 Updates an existing subscription.
+
 ```typescript
 Parameters:
 - id: number
@@ -235,7 +272,9 @@ Parameters:
 ### Category Tools
 
 #### manage_categories
+
 Performs CRUD operations on categories.
+
 ```typescript
 Parameters:
 - action: 'list' | 'add' | 'edit' | 'delete' | 'sort'
@@ -247,7 +286,9 @@ Parameters:
 ### Currency Tools
 
 #### manage_currencies
+
 Manages currencies and exchange rates.
+
 ```typescript
 Parameters:
 - action: 'list' | 'add' | 'edit' | 'delete' | 'update_rates'

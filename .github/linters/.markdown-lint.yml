@@ -9,11 +9,11 @@ extends: null
 
 # MD003/heading-style - Heading style
 MD003:
-  style: "atx"
+  style: 'atx'
 
 # MD004/ul-style - Unordered list style
 MD004:
-  style: "dash"
+  style: 'dash'
 
 # MD007/ul-indent - Unordered list indentation
 MD007:
@@ -32,15 +32,15 @@ MD024:
 
 # MD026/no-trailing-punctuation - Trailing punctuation in heading
 MD026:
-  punctuation: ".,;:!"
+  punctuation: '.,;:!'
 
 # MD029/ol-prefix - Ordered list item prefix
 MD029:
-  style: "ordered"
+  style: 'ordered'
 
 # MD033/no-inline-html - Inline HTML
 MD033:
-  allowed_elements: ["details", "summary", "example"]
+  allowed_elements: ['details', 'summary', 'example']
 
 # MD041/first-line-heading - First line in file should be a top level heading
 MD041: false
@@ -50,4 +50,4 @@ MD042: true
 
 # MD046/code-block-style - Code block style
 MD046:
-  style: "fenced"
+  style: 'fenced'

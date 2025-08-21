@@ -16,15 +16,18 @@ This document contains key information for continuing development of the Wallos 
 ## Key Wallos API Insights
 
 ### Authentication
+
 - Session-based authentication using PHP sessions
 - Login endpoint likely at `/login.php` or similar
 - Session cookie required for all API calls
 - User ID stored in `$_SESSION['userId']`
 
 ### API Endpoints Structure
+
 All endpoints follow pattern: `/endpoints/{domain}/{action}.php`
 
 Key domains:
+
 - `subscription/` - Individual subscription operations
 - `subscriptions/` - Bulk operations
 - `categories/` - Category management
@@ -35,6 +38,7 @@ Key domains:
 - `admin/` - Administrative functions
 
 ### Request/Response Format
+
 - GET parameters for most operations
 - JSON responses
 - Actions specified via `?action=` parameter
@@ -65,6 +69,7 @@ Key domains:
 ## Next Steps for Implementation
 
 ### Step 1: Create Basic MCP Server
+
 ```typescript
 // src/index.ts
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -76,6 +81,7 @@ import { WallosClient } from './wallos-client.js';
 ```
 
 ### Step 2: Implement Wallos Client
+
 ```typescript
 // src/wallos-client.ts
 class WallosClient {
@@ -88,7 +94,9 @@ class WallosClient {
 ```
 
 ### Step 3: Create First Tool
+
 Start with `list_subscriptions` as it's read-only and safe:
+
 ```typescript
 // src/tools/subscriptions.ts
 - Define tool schema
@@ -115,15 +123,17 @@ Start with `list_subscriptions` as it's read-only and safe:
 ## Common Wallos Response Patterns
 
 Success:
+
 ```json
 {
   "success": true,
   "message": "Operation completed",
-  "id": 123  // For create operations
+  "id": 123 // For create operations
 }
 ```
 
 Error:
+
 ```json
 {
   "success": false,
@@ -136,25 +146,26 @@ Error:
 ```bash
 # Install dependencies
 cd /Users/in/Code/wallos-mcp
-npm install
+bun install
 
 # Start development
-npm run dev
+bun run dev
 
 # Build
-npm run build
+bun run build
 
 # Test single tool
-npx @modelcontextprotocol/cli test --tool list_subscriptions
+bunx @modelcontextprotocol/cli test --tool list_subscriptions
 ```
 
 ## Session Handoff Checklist
 
 When picking up in a new session:
+
 1. Navigate to `/Users/in/Code/wallos-mcp`
 2. Review this document
 3. Check Wallos instance is running
-4. Install npm dependencies if needed
+4. Install bun dependencies if needed
 5. Continue from "Next Steps for Implementation"
 
 ## Wallos Instance Details
