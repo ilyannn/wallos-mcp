@@ -189,20 +189,24 @@ SESSION_TIMEOUT=3600000
 
 All project documentation is organized in the `doc/` folder:
 
-- **`doc/IMPLEMENTATION_NOTES.md`** - Detailed development guidance and session pickup instructions
+- **`doc/IMPLEMENTATION_NOTES.md`** - Detailed development guidance and session
+  pickup instructions
 - **`doc/SECURITY_REVIEW.md`** - Security audit results and best practices
 - **`doc/WALLOS_API_KEY_ENDPOINT.md`** - Technical details on API key retrieval
 
 ## CI/CD Pipeline Status
 
 ### Current State
+
 - **✅ Code Quality & Linting**: Passing consistently
 - **✅ Super-Linter**: Comprehensive checks (ESLint, Prettier, Markdown, Security)
 - **✅ Test & Build**: Multi-Node compatibility (18, 20, 22) with separate build config
-- **✅ Docker Build**: Multi-platform builds (linux/amd64, linux/arm64) with security scanning
+- **✅ Docker Build**: Multi-platform builds (linux/amd64, linux/arm64) with
+  security scanning
 - **✅ CodeQL**: Security analysis and vulnerability detection
 
 ### CI Pipeline Features
+
 - **Comprehensive Quality Checks**: TypeScript, ESLint, markdownlint, security scanning
 - **Multi-Node Testing**: Ensures compatibility across Node.js versions
 - **Docker Integration**: Multi-platform builds with Trivy security scanning
@@ -210,6 +214,7 @@ All project documentation is organized in the `doc/` folder:
 - **Smart Validation**: Full codebase on main, changed files on PRs
 
 ### Build Configuration
+
 - **Development**: `tsconfig.json` includes tests for full type checking
 - **Production**: `tsconfig.build.json` excludes tests for clean builds
 - **Build Command**: `bun run tsc --project tsconfig.build.json`
