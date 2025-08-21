@@ -1,0 +1,31 @@
+# Hadolint configuration for Dockerfile linting
+# Documentation: https://github.com/hadolint/hadolint
+
+ignored:
+  # Allow using latest tag for development
+  - DL3007
+  # Allow apt-get without version pinning
+  - DL3008
+  # Allow pip without version pinning  
+  - DL3013
+  # Allow using ADD for remote files
+  - DL3020
+
+trustedRegistries:
+  - docker.io
+  - ghcr.io
+  - quay.io
+
+override:
+  error:
+    - DL3001  # Avoid sudo
+    - DL3002  # Avoid switching users
+  warning:
+    - DL3018  # Pin versions in apk add
+  info:
+    - DL3059  # Multiple consecutive RUN instructions
+
+label-schema:
+  maintainer: text
+  version: text
+  description: text
