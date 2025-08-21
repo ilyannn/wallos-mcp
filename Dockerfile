@@ -1,23 +1,31 @@
 # Build stage
-FROM node:20-alpine AS builder
+FROM oven/bun:1.2-alpine AS builder
 
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
+COPY package.json bun.lock ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci
+RUN bun install --frozen-lockfile
 
 # Copy source code
 COPY src ./src
 
 # Build the application
-RUN npm run build
+RUN bun run build
 
 # Production stage
 FROM node:20-alpine
+
+# Add labels for container metadata
+LABEL maintainer="Wallos MCP Maintainers"
+LABEL version="0.1.0"
+LABEL description="MCP server for Wallos subscription management"
+LABEL org.opencontainers.image.source="https://github.com/ilyannn/wallos-mcp"
+LABEL org.opencontainers.image.description="MCP server for Wallos subscription management"
+LABEL org.opencontainers.image.licenses="MIT"
 
 WORKDIR /app
 
@@ -29,10 +37,10 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Copy package files
-COPY package*.json ./
+COPY package.json ./
 
 # Install production dependencies only
-RUN npm ci --only=production && \
+RUN npm install --only=production && \
     npm cache clean --force
 
 # Copy built application from builder
