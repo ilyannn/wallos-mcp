@@ -1,5 +1,7 @@
 # Wallos MCP Server
 
+![Wallos MCP Server](.github/social-image.png)
+
 An MCP (Model Context Protocol) server that enables Claude Desktop to
 interact with your Wallos subscription management instance.
 

@@ -30,7 +30,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 WORKDIR /app
 
 # Install dumb-init for proper signal handling
-RUN apk add --no-cache dumb-init
+RUN apk add --no-cache dumb-init=1.2.5-r3
 
 # Copy package files
 COPY package.json ./

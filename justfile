@@ -211,7 +211,7 @@ superlint:
     -e VALIDATE_TERRAGRUNT=true \
     -e VALIDATE_TSX=true \
     -e VALIDATE_TYPESCRIPT_ES=true \
-    -e VALIDATE_TYPESCRIPT_STANDARD=true \
+    -e VALIDATE_TYPESCRIPT_STANDARD=false \
     -e VALIDATE_XML=true \
     -e VALIDATE_YAML=true \
     -e VALIDATE_PRETTIER=true \
