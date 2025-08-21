@@ -134,9 +134,37 @@ package:
   bun pack
   @echo "Package created successfully"
 
-# Run GitHub Super-Linter locally - focused on relevant linters for this project
+# Run GitHub Super-Linter locally - focused on relevant linters for this project  
 superlint:
   @echo "Running Super-Linter with relevant linters for TypeScript/Node.js project..."
+  docker run --rm \
+    -e RUN_LOCAL=true \
+    -e DEFAULT_BRANCH=main \
+    -e VALIDATE_ALL_CODEBASE=true \
+    -e VALIDATE_BASH=true \
+    -e VALIDATE_DOCKERFILE_HADOLINT=true \
+    -e VALIDATE_ENV=true \
+    -e VALIDATE_GITHUB_ACTIONS=true \
+    -e VALIDATE_GITLEAKS=true \
+    -e VALIDATE_JAVASCRIPT_ES=true \
+    -e VALIDATE_JSON=true \
+    -e VALIDATE_MARKDOWN=true \
+    -e VALIDATE_TYPESCRIPT_ES=true \
+    -e VALIDATE_YAML=true \
+    -e VALIDATE_PRETTIER=true \
+    -e PRETTIER_CONFIG_FILE=.prettierrc \
+    -e FILTER_REGEX_EXCLUDE=".*dist/.*|.*node_modules/.*|.*coverage/.*" \
+    -e LOG_LEVEL=INFO \
+    -e CREATE_LOG_FILE=false \
+    -e DISABLE_ERRORS=false \
+    -e MULTI_STATUS=false \
+    -v "$(pwd)":/tmp/lint \
+    -w /tmp/lint \
+    github/super-linter:v5
+
+# Run Super-Linter with verbose output and comprehensive checks
+superlint-verbose:
+  @echo "Running Super-Linter with verbose output for debugging..."
   docker run --rm \
     -e RUN_LOCAL=true \
     -e DEFAULT_BRANCH=main \
