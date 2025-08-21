@@ -71,13 +71,16 @@ describe('WallosClient Session Authentication', () => {
 
   describe('Session Authentication', () => {
     test('should authenticate successfully with valid credentials', async () => {
-      // Mock successful login
+      // Mock successful login with Set-Cookie headers
       mockAxiosInstance.post.mockResolvedValue({
         status: 302,
-        headers: { location: '/dashboard' },
+        headers: { 
+          location: '/dashboard',
+          'set-cookie': ['PHPSESSID=test-session-id; path=/']
+        },
       });
 
-      // Mock session cookie
+      // Mock session cookie (legacy - still needed for some tests)
       const mockSessionCookie = {
         key: 'PHPSESSID',
         value: 'test-session-id',
@@ -102,8 +105,16 @@ describe('WallosClient Session Authentication', () => {
         }),
       );
 
-      // Verify cookie jar was checked
-      expect(mockCookieJar.getCookies).toHaveBeenCalled();
+      // Verify authentication was attempted (login POST call)
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/login.php',
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        })
+      );
 
       // Verify success message
       expect(stderrSpy).toHaveBeenCalledWith('Successfully authenticated with Wallos\n');
@@ -114,10 +125,11 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should fail authentication with invalid credentials', async () => {
-      // Mock failed login (no session cookie)
+      // Mock failed login (no session cookie in headers)
       mockAxiosInstance.post.mockResolvedValue({
         status: 200,
         data: 'Invalid credentials',
+        headers: {}, // No set-cookie headers
       });
 
       mockCookieJar.getCookies.mockResolvedValue([]); // No cookies
@@ -141,7 +153,12 @@ describe('WallosClient Session Authentication', () => {
 
     test('should reuse existing session when not expired', async () => {
       // First call - authenticate
-      mockAxiosInstance.post.mockResolvedValue({ status: 302 });
+      mockAxiosInstance.post.mockResolvedValue({ 
+        status: 302,
+        headers: {
+          'set-cookie': ['PHPSESSID=session1; path=/']
+        }
+      });
       mockCookieJar.getCookies.mockResolvedValue([
         { key: 'PHPSESSID', value: 'session1' },
       ]);
@@ -166,7 +183,12 @@ describe('WallosClient Session Authentication', () => {
   describe('Category Mutations', () => {
     beforeEach(() => {
       // Setup successful authentication mock
-      mockAxiosInstance.post.mockResolvedValue({ status: 302 });
+      mockAxiosInstance.post.mockResolvedValue({ 
+        status: 302,
+        headers: {
+          'set-cookie': ['PHPSESSID=test-session; path=/']
+        }
+      });
       mockCookieJar.getCookies.mockResolvedValue([
         { key: 'PHPSESSID', value: 'test-session' },
       ]);
@@ -281,7 +303,12 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should handle malformed server responses', async () => {
-      mockAxiosInstance.post.mockResolvedValue({ status: 302 });
+      mockAxiosInstance.post.mockResolvedValue({ 
+        status: 302,
+        headers: {
+          'set-cookie': ['PHPSESSID=malformed-session; path=/']
+        }
+      });
       mockCookieJar.getCookies.mockResolvedValue([
         { key: 'PHPSESSID', value: 'session' },
       ]);
