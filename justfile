@@ -121,6 +121,9 @@ test-tool TOOL:
 # Run all quality checks (fast local checks)
 check: typecheck lint test
 
+# Specfic entry point for the pre-commit hook
+pre-commit: fmt check
+
 # Run comprehensive quality checks (includes Super-Linter)
 check-all: check superlint
 
