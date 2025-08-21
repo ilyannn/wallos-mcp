@@ -12,6 +12,10 @@ MCP server in a new session.
 - ✅ package.json with dependencies configured
 - ✅ TypeScript configuration ready
 - ✅ Comprehensive README with implementation plan
+- ✅ Complete CI/CD pipeline with GitHub Actions
+- ✅ Docker build and security scanning workflows
+- ✅ Super Linter integration for code quality
+- ✅ Comprehensive development tooling (justfile)
 - ⏳ Next: Implement core MCP server infrastructure
 
 ## Key Wallos API Insights
@@ -144,6 +148,40 @@ Error:
 
 ## Development Commands
 
+### Using Justfile (Recommended)
+
+```bash
+# Initial setup
+just setup
+
+# Start development
+just start
+
+# Run all quality checks
+just check
+
+# Comprehensive linting
+just lint
+
+# Format code
+just fmt
+
+# Run Super Linter (fast)
+just superlint
+
+# Run Super Linter (verbose debugging)
+just superlint-verbose
+
+# Docker operations
+just docker-build
+just docker-run
+
+# Test single tool
+just test-tool TOOL_NAME
+```
+
+### Manual Commands
+
 ```bash
 # Install dependencies
 cd /Users/in/Code/wallos-mcp
@@ -159,6 +197,34 @@ bun run build
 bunx @modelcontextprotocol/cli test --tool list_subscriptions
 ```
 
+## CI/CD Pipeline
+
+### GitHub Actions Workflows
+
+1. **Test Suite** (`.github/workflows/test.yml`)
+   - Runs on: Push to main, PRs, manual dispatch
+   - Node.js versions: 18, 20, 22
+   - Steps: Install → Lint → Format → Typecheck → Test → Build
+   - Uses Bun for fast execution
+
+2. **Docker Build & Test** (`.github/workflows/docker.yml`)
+   - Multi-platform builds (linux/amd64, linux/arm64)
+   - Security scanning with Trivy
+   - Integration tests for containers
+   - Automatic GHCR publishing
+
+3. **Super Linter** (`.github/workflows/superlint.yml`)
+   - Comprehensive code quality checks
+   - Relevant linters: Bash, Dockerfile, Env, GitHub Actions, GitLeaks, JavaScript/TypeScript, JSON, Markdown, YAML, Prettier
+   - Smart validation: Full codebase on main, changed files on PRs
+
+### Quality Assurance
+
+- **Local**: `just lint`, `just fmt`, `just superlint`
+- **CI**: Automated on every push and PR
+- **Security**: Docker vulnerability scanning
+- **Standards**: Consistent formatting and linting rules
+
 ## Session Handoff Checklist
 
 When picking up in a new session:
@@ -166,8 +232,9 @@ When picking up in a new session:
 1. Navigate to `/Users/in/Code/wallos-mcp`
 2. Review this document
 3. Check Wallos instance is running
-4. Install bun dependencies if needed
-5. Continue from "Next Steps for Implementation"
+4. Run `just setup` if first time
+5. Run `just check` to verify everything works
+6. Continue from "Next Steps for Implementation"
 
 ## Wallos Instance Details
 
@@ -183,7 +250,33 @@ When picking up in a new session:
 - MCP docs: <https://modelcontextprotocol.io>
 - Wallos endpoints: `/Users/in/Code/Wallos/endpoints/`
 
+## Troubleshooting
+
+### Common Issues
+
+1. **Super Linter Errors**
+   - Use `just superlint-verbose` for detailed debugging
+   - Check specific file violations in logs
+   - Run `just fmt` to auto-fix formatting issues
+
+2. **Docker Build Issues**
+   - Verify Dockerfile syntax with `just superlint`
+   - Test local build with `just docker-build`
+   - Check security scan results in GitHub Actions
+
+3. **Permissions Issues**
+   - GitHub Actions needs `security-events: write` for security scans
+   - Use `continue-on-error: true` for non-critical upload failures
+
+### Development Workflow
+
+1. Make changes
+2. Run `just lint` and `just fmt`
+3. Test with `just check`
+4. Commit and push
+5. Monitor GitHub Actions for any failures
+
 ---
 
 Last updated: 2025-08-21
-Ready for implementation phase!
+Ready for implementation phase with full CI/CD pipeline!
