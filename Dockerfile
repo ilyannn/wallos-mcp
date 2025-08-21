@@ -17,7 +17,7 @@ COPY src ./src
 RUN bun run build
 
 # Production stage
-FROM node:20-alpine
+FROM oven/bun:1.2-alpine
 
 # Add labels for container metadata
 LABEL maintainer="Wallos MCP Maintainers"
@@ -32,25 +32,23 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
-
 # Copy package files
 COPY package.json ./
 
-# Install production dependencies only
-RUN npm install --only=production && \
-    npm cache clean --force
+# Install production dependencies only with bun
+RUN bun install --production --frozen-lockfile
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
+# Change ownership to bun user
+RUN chown -R bun:bun /app
+
 # Switch to non-root user
-USER nodejs
+USER bun
 
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the MCP server
-CMD ["node", "dist/index.js"]
+# Start the MCP server with bun
+CMD ["bun", "dist/index.js"]

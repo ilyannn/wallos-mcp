@@ -57,7 +57,7 @@ bun run build
 {
   "mcpServers": {
     "wallos": {
-      "command": "node",
+      "command": "bun",
       "args": ["/path/to/wallos-mcp/dist/index.js"],
       "env": {
         "WALLOS_URL": "http://localhost:8282",
