@@ -1,10 +1,14 @@
 # Wallos MCP Server
 
-An MCP (Model Context Protocol) server that enables Claude Desktop to interact with your Wallos subscription management instance.
+An MCP (Model Context Protocol) server that enables Claude Desktop to
+interact with your Wallos subscription management instance.
 
 ## Overview
 
-This MCP server provides tools for managing subscriptions, categories, currencies, payment methods, and household members in Wallos through Claude Desktop. It acts as a bridge between Claude and your self-hosted Wallos instance.
+This MCP server provides tools for managing subscriptions, categories,
+currencies, payment methods, and household members in Wallos through Claude
+Desktop. It acts as a bridge between Claude and your self-hosted Wallos
+instance.
 
 ## Features
 
@@ -19,7 +23,7 @@ This MCP server provides tools for managing subscriptions, categories, currencie
 ## Prerequisites
 
 - Wallos instance (self-hosted or Docker)
-- Bun runtime (https://bun.sh)
+- Bun runtime (<https://bun.sh>)
 - Claude Desktop
 - Wallos user credentials
 
@@ -32,26 +36,26 @@ git clone https://github.com/yourusername/wallos-mcp.git
 cd wallos-mcp
 ```
 
-2. Install dependencies:
+1. Install dependencies:
 
 ```bash
 bun install
 ```
 
-3. Configure environment:
+1. Configure environment:
 
 ```bash
 cp .env.example .env
 # Edit .env with your Wallos instance details
 ```
 
-4. Build the project:
+1. Build the project:
 
 ```bash
 bun run build
 ```
 
-5. Add to Claude Desktop config:
+1. Add to Claude Desktop config:
 
 ```json
 {
@@ -125,7 +129,7 @@ bun run build
 
 ### Project Structure
 
-```
+```text
 wallos-mcp/
 ├── src/
 │   ├── index.ts                 # MCP server entry point
@@ -163,7 +167,7 @@ wallos-mcp/
 
 2. **Request Flow**:
 
-   ```
+   ```text
    Claude Desktop → MCP Tool → Wallos Client → Wallos API → SQLite DB
                           ↓                           ↓
                     Response ← JSON Response ← PHP Endpoint
