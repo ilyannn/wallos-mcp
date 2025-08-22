@@ -8,19 +8,21 @@ import { WallosClient } from './wallos-client.js';
 import { CreateSubscriptionData } from './types/index.js';
 
 // Type assertion function for MCP arguments with runtime validation
-function assertCreateSubscriptionArgs(args: Record<string, unknown> | undefined): CreateSubscriptionData {
+function assertCreateSubscriptionArgs(
+  args: Record<string, unknown> | undefined,
+): CreateSubscriptionData {
   if (!args) {
     throw new Error('Missing arguments for create_subscription');
   }
-  
+
   if (typeof args.name !== 'string') {
     throw new Error('create_subscription requires name to be a string');
   }
-  
+
   if (typeof args.price !== 'number') {
     throw new Error('create_subscription requires price to be a number');
   }
-  
+
   // Runtime validation passed, safe to cast
   return args as unknown as CreateSubscriptionData;
 }

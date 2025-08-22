@@ -78,6 +78,12 @@ export interface MutationResponse {
   categoryId?: number;
 }
 
+// Real API response format for subscription creation (used by actual Wallos API)
+export interface WallosApiResponse {
+  status: string; // "Success" or other status
+  message: string; // Response message
+}
+
 export interface CategoryMutationResponse extends MutationResponse {
   categoryId?: number;
 }
@@ -141,7 +147,7 @@ export interface SubscriptionFilters {
   member?: string; // comma-separated member IDs
   category?: string; // comma-separated category IDs
   payment?: string; // comma-separated payment method IDs
-  state?: '0' | '1'; // 0 = active, 1 = inactive
+  state?: '0' | '1' | 'active' | 'inactive'; // 0/active = active, 1/inactive = inactive
   disabled_to_bottom?: boolean;
   sort?:
     | 'name'
@@ -180,18 +186,19 @@ export interface CreateSubscriptionData {
   notify_days_before?: number;
 }
 
-export interface SubscriptionMutationResponse extends MutationResponse {
-  subscription_id?: number;
-}
+// Union type to support both old and new response formats
+export type SubscriptionMutationResponse =
+  | (MutationResponse & { subscription_id?: number })
+  | (WallosApiResponse & { subscription_id?: number });
 
-export interface PaymentMethodMutationResponse extends MutationResponse {
-  payment_method_id?: number;
-}
+export type PaymentMethodMutationResponse =
+  | (MutationResponse & { payment_method_id?: number })
+  | (WallosApiResponse & { payment_method_id?: number });
 
-export interface CurrencyMutationResponse extends MutationResponse {
-  currency_id?: number;
-}
+export type CurrencyMutationResponse =
+  | (MutationResponse & { currency_id?: number })
+  | (WallosApiResponse & { currency_id?: number });
 
-export interface HouseholdMemberMutationResponse extends MutationResponse {
-  household_member_id?: number;
-}
+export type HouseholdMemberMutationResponse =
+  | (MutationResponse & { household_member_id?: number })
+  | (WallosApiResponse & { household_member_id?: number });

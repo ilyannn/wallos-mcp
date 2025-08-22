@@ -265,12 +265,28 @@ export async function handleCreateSubscription(
   try {
     const response = await client.createSubscription(args);
 
-    if (!response.success) {
-      throw new Error(`Failed to create subscription: ${response.errorMessage || 'Unknown error'}`);
+    // Handle both old and new response formats
+    if ('status' in response) {
+      if (response.status !== 'Success') {
+        throw new Error(`Failed to create subscription: ${response.message || 'Unknown error'}`);
+      }
+    } else if ('success' in response) {
+      if (!response.success) {
+        throw new Error(
+          `Failed to create subscription: ${response.errorMessage || 'Unknown error'}`,
+        );
+      }
+    } else {
+      throw new Error('Invalid response format from subscription creation');
     }
 
     let result = `✅ Successfully created subscription!\n\n`;
-    result += `**Subscription ID:** ${response.subscription_id}\n`;
+
+    // Add message if available
+    if ('message' in response && response.message) {
+      result += `**Message:** ${response.message}\n`;
+    }
+
     result += `**Name:** ${args.name}\n`;
     result += `**Price:** ${args.price}`;
 

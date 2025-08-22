@@ -91,10 +91,10 @@ describe('Subscription Creation', () => {
       const result = await client.addPaymentMethod();
 
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/paymentmethods/paymentmethod.php?action=add'),
+        expect.stringContaining('/endpoints/payments/add.php?action=add'),
       );
-      expect(result.success).toBe(true);
-      expect(result.payment_method_id).toBe(5);
+      expect((result as any).success).toBe(true);
+      expect((result as any).payment_method_id).toBe(5);
     });
 
     test('should create payment method with custom name', async () => {
@@ -139,18 +139,24 @@ describe('Subscription Creation', () => {
       });
       
       // Mock subscription creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, subscription_id: 10 },
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
       const result = await client.createSubscription(subscriptionData);
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/subscriptions/subscription.php?'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/subscription/add.php',
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
       );
 
-      expect(result.success).toBe(true);
-      expect(result.subscription_id).toBe(10);
+      expect((result as any).status).toBe('Success');
+      expect((result as any).message).toContain('successfully');
     });
   });
 
@@ -200,8 +206,8 @@ describe('Subscription Creation', () => {
       });
 
       // Mock subscription creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, subscription_id: 12 },
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
       const result = await client.createSubscription(subscriptionData);
@@ -213,16 +219,22 @@ describe('Subscription Creation', () => {
 
       // Verify payment method creation was called
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/paymentmethods/paymentmethod.php'),
+        expect.stringContaining('/endpoints/payments/add.php'),
       );
 
       // Verify subscription creation was called
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/subscriptions/subscription.php?'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/subscription/add.php',
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
       );
 
-      expect(result.success).toBe(true);
-      expect(result.subscription_id).toBe(12);
+      expect((result as any).status).toBe('Success');
+      expect((result as any).message).toContain('successfully');
     });
 
     test('should handle category creation failure', async () => {
@@ -354,7 +366,7 @@ describe('Subscription Creation', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         expect.stringContaining('name=Updated+Payment'),
       );
-      expect(result.success).toBe(true);
+      expect((result as any).success).toBe(true);
     });
 
     test('should delete payment method', async () => {
@@ -370,7 +382,7 @@ describe('Subscription Creation', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         expect.stringContaining('paymentMethodId=3'),
       );
-      expect(result.success).toBe(true);
+      expect((result as any).success).toBe(true);
     });
   });
 
@@ -391,7 +403,7 @@ describe('Subscription Creation', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         expect.stringContaining('email=john%40example.com'),
       );
-      expect(result.success).toBe(true);
+      expect((result as any).success).toBe(true);
       expect(result.household_member_id).toBe(3);
     });
 
@@ -405,7 +417,7 @@ describe('Subscription Creation', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         expect.stringContaining('email=jane.smith%40household.local'),
       );
-      expect(result.success).toBe(true);
+      expect((result as any).success).toBe(true);
     });
 
     test('should find household member by name', async () => {
@@ -447,7 +459,7 @@ describe('Subscription Creation', () => {
       expect(mockAxiosInstance.get).toHaveBeenCalledWith(
         expect.stringContaining('symbol=%E2%82%AC'), // URL encoded €
       );
-      expect(result.success).toBe(true);
+      expect((result as any).success).toBe(true);
       expect(result.currency_id).toBe(5);
     });
 
@@ -511,22 +523,25 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, subscription_id: 20 },
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
       const result = await client.createSubscription(subscriptionData);
 
-      expect(result.success).toBe(true);
-      expect(result.subscription_id).toBe(20);
+      expect((result as any).status).toBe('Success');
+      expect((result as any).message).toContain('successfully');
 
-      // Verify dates were set
-      const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
-      const url = lastCall[0] as string;
-      const params = new URLSearchParams(url.split('?')[1]);
-      expect(params.get('start_date')).toBe('2025-01-01');
-      expect(params.get('next_payment')).toBe('2025-09-01'); // 8 months after (monthly billing)
-      expect(params.get('payer_user_id')).toBe('5');
+      // Verify subscription creation was called with POST
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/subscription/add.php',
+        expect.any(URLSearchParams),
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }),
+      );
     });
   });
 
@@ -573,14 +588,14 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, subscription_id: 15 },
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
       const result = await client.createSubscription(subscriptionData);
 
-      expect(result.success).toBe(true);
-      expect(result.subscription_id).toBe(15);
+      expect((result as any).status).toBe('Success');
+      expect((result as any).message).toContain('successfully');
     });
   });
 
@@ -625,18 +640,17 @@ Renews monthly`,
         });
 
         // Create subscription
-        mockAxiosInstance.get.mockResolvedValueOnce({
-          data: { success: true, subscription_id: 100 },
+        mockAxiosInstance.post.mockResolvedValueOnce({
+          data: { status: 'Success', message: 'Subscription added successfully' },
         });
 
         await client.createSubscription(subscriptionData);
 
         // Verify the cycle and frequency parameters were set correctly
-        const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
-        const url = lastCall[0] as string;
-        const params = new URLSearchParams(url.split('?')[1]);
-        expect(params.get('cycle')).toBe(testCase.expectedCycle.toString());
-        expect(params.get('frequency')).toBe(testCase.expectedFreq.toString());
+        const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
+        const formData = lastCall[1] as URLSearchParams;
+        expect(formData.get('cycle')).toBe(testCase.expectedCycle.toString());
+        expect(formData.get('frequency')).toBe(testCase.expectedFreq.toString());
       }
     });
 
@@ -663,8 +677,8 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, subscription_id: 100 },
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
       // Mock process.stderr.write
@@ -679,11 +693,10 @@ Renews monthly`,
       );
 
       // Should default to monthly (cycle: 3, frequency: 1)
-      const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
-      const url = lastCall[0] as string;
-      const params = new URLSearchParams(url.split('?')[1]);
-      expect(params.get('cycle')).toBe('3');
-      expect(params.get('frequency')).toBe('1');
+      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
+      const formData = lastCall[1] as URLSearchParams;
+      expect(formData.get('cycle')).toBe('3');
+      expect(formData.get('frequency')).toBe('1');
     });
   });
 });

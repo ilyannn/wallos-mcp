@@ -82,6 +82,15 @@ describe('Subscription Integration Tests', () => {
 
   describe('Real-World Subscription Scenarios', () => {
     test('should create Netflix Premium subscription with full workflow', async () => {
+      // Mock authentication first
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({
+          status: 302,
+          headers: {
+            'set-cookie': ['PHPSESSID=test-session; path=/'],
+          },
+        });
+      
       // Mock sequence for Netflix subscription creation
       mockAxiosInstance.get
         // Get currencies for USD lookup (not found)
@@ -116,9 +125,10 @@ describe('Subscription Integration Tests', () => {
         .mockResolvedValueOnce({
           data: { success: true, household_member_id: 4 },
         })
-        // Create Netflix subscription
+      // Mock subscription creation with POST
+      mockAxiosInstance.post
         .mockResolvedValueOnce({
-          data: { success: true, subscription_id: 100 },
+          data: { status: 'Success', message: 'Netflix Premium subscription created successfully' },
         });
 
       const netflixData: CreateSubscriptionData = {
@@ -144,7 +154,7 @@ describe('Subscription Integration Tests', () => {
       const result = await handleCreateSubscription(client, netflixData);
 
       expect(result).toContain('✅ Successfully created subscription!');
-      expect(result).toContain('**Subscription ID:** 100');
+      expect(result).toContain('**Message:** Netflix Premium subscription created successfully');
       expect(result).toContain('**Name:** Netflix Premium');
       expect(result).toContain('**Price:** 15.99 USD');
       expect(result).toContain('**Category:** Entertainment');
@@ -155,7 +165,8 @@ describe('Subscription Integration Tests', () => {
       expect(result).toContain('automatically created if they didn\'t exist');
 
       // Verify all API calls were made in correct sequence
-      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(9);
+      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(8);
+      expect(mockAxiosInstance.post).toHaveBeenCalledTimes(2); // auth + subscription creation
     });
 
     test('should create Spotify annual subscription with EUR currency', async () => {
@@ -183,8 +194,11 @@ describe('Subscription Integration Tests', () => {
           data: { success: true, payment_method_id: 4 },
         })
         // Create subscription
+      
+      // Mock subscription creation with POST
+      mockAxiosInstance.post
         .mockResolvedValueOnce({
-          data: { success: true, subscription_id: 101 },
+          data: { status: 'Success', message: 'Spotify Premium subscription created successfully' },
         });
 
       const spotifyData: CreateSubscriptionData = {
@@ -256,8 +270,11 @@ describe('Subscription Integration Tests', () => {
             .mockResolvedValueOnce({ data: { success: true, payment_methods: [] } })
             .mockResolvedValueOnce({ data: { success: true, payment_method_id: 3 } })
             .mockResolvedValueOnce({ data: { success: true, household: [] } })
-            .mockResolvedValueOnce({ data: { success: true, household_member_id: 4 } })
-            .mockResolvedValueOnce({ data: { success: true, subscription_id: 200 + i } });
+            .mockResolvedValueOnce({ data: { success: true, household_member_id: 4 } });
+          
+          // Mock subscription creation with POST
+          mockAxiosInstance.post
+            .mockResolvedValueOnce({ data: { status: 'Success', message: 'Subscription created successfully' } });
         } else {
           // Subsequent services: reuse some entities
           mockAxiosInstance.get
@@ -272,8 +289,9 @@ describe('Subscription Integration Tests', () => {
               .mockResolvedValueOnce({ data: { success: true, household_member_id: 4 + i } });
           }
 
-          mockAxiosInstance.get
-            .mockResolvedValueOnce({ data: { success: true, subscription_id: 200 + i } });
+          // Mock subscription creation with POST
+          mockAxiosInstance.post
+            .mockResolvedValueOnce({ data: { status: 'Success', message: 'Subscription created successfully' } });
         }
 
         const result = await handleCreateSubscription(client, service);
@@ -295,7 +313,10 @@ describe('Subscription Integration Tests', () => {
         .mockResolvedValueOnce({ data: { success: true, categoryId: 2 } })
         .mockResolvedValueOnce({ data: { success: true, payment_methods: [] } })
         .mockResolvedValueOnce({ data: { success: true, payment_method_id: 3 } })
-        .mockResolvedValueOnce({ data: { success: true, subscription_id: 300 } });
+      
+      // Mock subscription creation with POST
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({ data: { status: 'Success', message: 'Netflix subscription created successfully' } });
 
       const netflixData: CreateSubscriptionData = {
         name: 'Netflix Premium',
@@ -347,7 +368,7 @@ describe('Subscription Integration Tests', () => {
     test('should create multiple subscriptions and filter by category', async () => {
       // Create subscriptions (mocked as successful)
       for (let i = 0; i < 3; i++) {
-        mockAxiosInstance.get.mockResolvedValue({ data: { success: true, subscription_id: 400 + i } });
+        mockAxiosInstance.post.mockResolvedValue({ data: { status: 'Success', message: 'Subscription created successfully' } });
       }
 
       // Mock listing with Entertainment filter
@@ -416,7 +437,10 @@ describe('Subscription Integration Tests', () => {
         // Mock successful creation
         mockAxiosInstance.get
           .mockResolvedValueOnce({ data: { success: true, currencies: [{ id: 1, code: 'USD' }] } })
-          .mockResolvedValueOnce({ data: { success: true, subscription_id: 500 } });
+      
+      // Mock subscription creation with POST
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({ data: { status: 'Success', message: 'Gaming service subscription created successfully' } });
 
         const subscriptionData: CreateSubscriptionData = {
           name: `Test Service - ${testCase.period}`,
@@ -453,7 +477,10 @@ describe('Subscription Integration Tests', () => {
           // Category lookup and creation
           .mockResolvedValueOnce({ data: { success: true, categories: [] } })
           .mockResolvedValueOnce({ data: { success: true, categoryId: i + 5 } })
-          .mockResolvedValueOnce({ data: { success: true, subscription_id: 600 + i } });
+      
+      // Mock subscription creation with POST
+      mockAxiosInstance.post
+        .mockResolvedValue({ data: { status: 'Success', message: 'Subscription created successfully' } });
 
         const subscriptionData: CreateSubscriptionData = {
           name: service.name,
@@ -538,7 +565,10 @@ describe('Subscription Integration Tests', () => {
       // Mock successful currency lookup and subscription creation
       mockAxiosInstance.get
         .mockResolvedValueOnce({ data: { success: true, currencies: [{ id: 1, code: 'USD' }] } })
-        .mockResolvedValueOnce({ data: { success: true, subscription_id: 999 } });
+      
+      // Mock subscription creation with POST  
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({ data: { status: 'Success', message: 'Subscription created successfully' } });
 
       const invalidFrequencyData: CreateSubscriptionData = {
         name: 'Test Service',
@@ -570,7 +600,7 @@ describe('Subscription Integration Tests', () => {
       // Mock simple successful creation for each
       for (let i = 0; i < bulkSubscriptions.length; i++) {
         mockAxiosInstance.get.mockResolvedValueOnce({
-          data: { success: true, subscription_id: 1000 + i },
+          data: { status: 'Success', message: 'Subscription created successfully' },
         });
       }
 

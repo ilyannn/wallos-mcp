@@ -371,7 +371,7 @@ export class WallosClient {
       params.append('name', name);
     }
 
-    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
     return response.data;
   }
 
@@ -387,7 +387,7 @@ export class WallosClient {
       name: name,
     });
 
-    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
     return response.data;
   }
 
@@ -402,7 +402,7 @@ export class WallosClient {
       paymentMethodId: id.toString(),
     });
 
-    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
     return response.data;
   }
 
@@ -457,7 +457,7 @@ export class WallosClient {
       params.append('symbol', defaultSymbols[code.toUpperCase()] || code);
     }
 
-    const response = await this.client.get(`/endpoints/currencies/currency.php?${params}`);
+    const response = await this.client.get(`/endpoints/currency/currency.php?${params}`);
     return response.data;
   }
 
@@ -605,12 +605,19 @@ export class WallosClient {
         } else {
           // If not found, create it
           const currencyResult = await this.addCurrency(data.currency_code);
-          if (currencyResult.success && currencyResult.currency_id) {
-            currencyId = currencyResult.currency_id;
+          if (
+            ('success' in currencyResult && currencyResult.success) ||
+            ('status' in currencyResult && currencyResult.status === 'Success')
+          ) {
+            if ('currency_id' in currencyResult && currencyResult.currency_id) {
+              currencyId = currencyResult.currency_id;
+            }
           } else {
-            throw new Error(
-              `Failed to create currency ${data.currency_code}: ${currencyResult.errorMessage || 'Unknown error'}`,
-            );
+            const errorMsg =
+              ('errorMessage' in currencyResult && currencyResult.errorMessage) ||
+              ('message' in currencyResult && currencyResult.message) ||
+              'Unknown error';
+            throw new Error(`Failed to create currency ${data.currency_code}: ${errorMsg}`);
           }
         }
       } else {
@@ -655,12 +662,19 @@ export class WallosClient {
       } else {
         // If not found, create it
         const paymentResult = await this.addPaymentMethod(data.payment_method_name);
-        if (paymentResult.success && paymentResult.payment_method_id) {
-          paymentMethodId = paymentResult.payment_method_id;
+        if (
+          ('success' in paymentResult && paymentResult.success) ||
+          ('status' in paymentResult && paymentResult.status === 'Success')
+        ) {
+          if ('payment_method_id' in paymentResult && paymentResult.payment_method_id) {
+            paymentMethodId = paymentResult.payment_method_id;
+          }
         } else {
-          throw new Error(
-            `Failed to create payment method: ${paymentResult.errorMessage || 'Unknown error'}`,
-          );
+          const errorMsg =
+            ('errorMessage' in paymentResult && paymentResult.errorMessage) ||
+            ('message' in paymentResult && paymentResult.message) ||
+            'Unknown error';
+          throw new Error(`Failed to create payment method: ${errorMsg}`);
         }
       }
     }
@@ -679,12 +693,19 @@ export class WallosClient {
           data.payer_user_name,
           data.payer_user_email,
         );
-        if (memberResult.success && memberResult.household_member_id) {
-          payerUserId = memberResult.household_member_id;
+        if (
+          ('success' in memberResult && memberResult.success) ||
+          ('status' in memberResult && memberResult.status === 'Success')
+        ) {
+          if ('household_member_id' in memberResult && memberResult.household_member_id) {
+            payerUserId = memberResult.household_member_id;
+          }
         } else {
-          throw new Error(
-            `Failed to create household member: ${memberResult.errorMessage || 'Unknown error'}`,
-          );
+          const errorMsg =
+            ('errorMessage' in memberResult && memberResult.errorMessage) ||
+            ('message' in memberResult && memberResult.message) ||
+            'Unknown error';
+          throw new Error(`Failed to create household member: ${errorMsg}`);
         }
       }
     } else if (data.payer_user_id) {
@@ -740,9 +761,13 @@ export class WallosClient {
       startDate = nextPayment;
     }
 
-    // Prepare subscription data
-    const subscriptionParams = new URLSearchParams({
-      action: 'add',
+    // Ensure currencyId is set
+    if (!currencyId) {
+      throw new Error('Currency ID could not be determined');
+    }
+
+    // Prepare form data for POST request
+    const formData = new URLSearchParams({
       name: data.name,
       price: data.price.toString(),
       currency_id: currencyId.toString(),
@@ -751,39 +776,41 @@ export class WallosClient {
     });
 
     if (categoryId) {
-      subscriptionParams.append('category_id', categoryId.toString());
+      formData.append('category_id', categoryId.toString());
     }
     if (paymentMethodId) {
-      subscriptionParams.append('payment_method_id', paymentMethodId.toString());
+      formData.append('payment_method_id', paymentMethodId.toString());
     }
     if (payerUserId) {
-      subscriptionParams.append('payer_user_id', payerUserId.toString());
+      formData.append('payer_user_id', payerUserId.toString());
     }
     if (startDate) {
-      subscriptionParams.append('start_date', startDate);
+      formData.append('start_date', startDate);
     }
     if (nextPayment) {
-      subscriptionParams.append('next_payment', nextPayment);
+      formData.append('next_payment', nextPayment);
     }
     if (data.auto_renew !== undefined) {
-      subscriptionParams.append('auto_renew', data.auto_renew ? '1' : '0');
+      formData.append('auto_renew', data.auto_renew ? '1' : '0');
     }
     if (data.notes) {
-      subscriptionParams.append('notes', data.notes);
+      formData.append('notes', data.notes);
     }
     if (data.url) {
-      subscriptionParams.append('url', data.url);
+      formData.append('url', data.url);
     }
     if (data.notify !== undefined) {
-      subscriptionParams.append('notify', data.notify ? '1' : '0');
+      formData.append('notifications', data.notify ? '1' : '0'); // PHP expects 'notifications'
     }
     if (data.notify_days_before !== undefined) {
-      subscriptionParams.append('notify_days_before', data.notify_days_before.toString());
+      formData.append('notify_days_before', data.notify_days_before.toString());
     }
 
-    const response = await this.client.get(
-      `/endpoints/subscriptions/subscription.php?${subscriptionParams}`,
-    );
+    const response = await this.client.post('/endpoints/subscription/add.php', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
 
     return response.data;
   }
