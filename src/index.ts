@@ -14,7 +14,12 @@ import {
   handleUpdateCategory,
   handleDeleteCategory,
 } from './tools/categories.js';
-import { listSubscriptionsTool, handleListSubscriptions } from './tools/subscriptions.js';
+import { 
+  listSubscriptionsTool, 
+  handleListSubscriptions,
+  createSubscriptionTool,
+  handleCreateSubscription,
+} from './tools/subscriptions.js';
 
 // Get configuration from environment variables
 const WALLOS_URL = process.env.WALLOS_URL || 'http://localhost:8282';
@@ -58,7 +63,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
   // Only register mutation tools if credentials are available
   if (WALLOS_USERNAME && WALLOS_PASSWORD) {
-    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool);
+    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool, createSubscriptionTool);
   }
 
   return { tools };
@@ -109,6 +114,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     case 'delete_category':
       result = await handleDeleteCategory(wallosClient, args as { id: number });
+      break;
+
+    case 'create_subscription':
+      result = await handleCreateSubscription(wallosClient, args as any);
       break;
 
     default:

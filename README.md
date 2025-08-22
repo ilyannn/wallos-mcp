@@ -75,6 +75,84 @@ bun run build
 }
 ```
 
+## Available Tools
+
+### create_subscription
+
+Create a new subscription with automatic entity creation. This powerful tool handles all the complexity of creating related entities automatically.
+
+**Features:**
+- 🌍 **Currency by Code**: Specify currencies using codes (USD, EUR, GBP, etc.) - automatically creates if doesn't exist
+- 📅 **Flexible Frequency**: Natural language billing periods ('daily', 'weekly', 'monthly', 'quarterly', 'bi-weekly', '3 months')
+- 🏷️ **Smart Entity Creation**: Automatically creates missing categories, payment methods, and household members
+- 👥 **Payer Management**: Specify payer by name with optional email - creates household member if needed
+- 📆 **Intelligent Date Handling**: Smart calculation of next payment date, always ensuring it's in the future
+
+**Parameters:**
+- `name` (required): Subscription service name
+- `price` (required): Subscription price amount
+- `currency_code`: Currency code (e.g., USD, EUR) - creates if needed
+- `currency_id`: Use existing currency ID (alternative to currency_code)
+- `billing_period`: Flexible period ('monthly', 'quarterly', '2 weeks', etc.)
+- `billing_frequency`: Multiplier for billing period (default: 1)
+- `category_name`: Category name (creates if needed, prioritized over category_id)
+- `category_id`: Use existing category ID
+- `payment_method_name`: Payment method name (creates if needed)
+- `payment_method_id`: Use existing payment method ID
+- `payer_user_name`: Household member name (creates if needed)
+- `payer_user_email`: Email for new household member
+- `payer_user_id`: Use existing household member ID
+- `start_date`: Subscription start date (YYYY-MM-DD)
+- `next_payment`: Next payment date (auto-calculated if not provided)
+- `auto_renew`: Whether subscription auto-renews (default: true)
+- `notes`: Additional notes (supports multiline)
+- `url`: Service URL
+- `notify`: Enable renewal notifications
+- `notify_days_before`: Days before renewal to notify
+
+**Example Usage:**
+```json
+{
+  "name": "Netflix Premium",
+  "price": 15.99,
+  "currency_code": "USD",
+  "billing_period": "monthly",
+  "category_name": "Entertainment",
+  "payment_method_name": "Credit Card",
+  "payer_user_name": "John Smith",
+  "payer_user_email": "john@family.com",
+  "start_date": "2024-01-15",
+  "auto_renew": true,
+  "notify": true,
+  "notify_days_before": 3,
+  "notes": "Premium family plan\n4K streaming\n4 simultaneous screens",
+  "url": "https://netflix.com"
+}
+```
+
+### list_subscriptions
+
+View all subscriptions with comprehensive filtering options.
+
+**Parameters:**
+- `member_ids`: Comma-separated member IDs (e.g., "1,3,5")
+- `category_ids`: Comma-separated category IDs
+- `payment_method_ids`: Comma-separated payment method IDs
+- `state`: Filter by state ('active' or 'inactive')
+- `sort`: Sort field (name, id, next_payment, price, etc.)
+- `disabled_to_bottom`: Sort inactive subscriptions to bottom
+- `convert_currency`: Convert prices to main currency
+
+### get_master_data
+
+Retrieve all master data (categories, currencies, payment methods, household members) in a single call.
+
+### Category Management Tools
+
+- `add_category`: Create a new category
+- `update_category`: Update category name
+- `delete_category`: Remove a category (unless it's the default)
+
 ## Implementation Plan
 
 ### Phase 1: Core Infrastructure ✅
@@ -91,8 +169,8 @@ bun run build
 
 ### Phase 2: Subscription Management
 
-- [ ] `list_subscriptions` - View all subscriptions with filters
-- [ ] `add_subscription` - Create new subscription
+- [x] `list_subscriptions` - View all subscriptions with filters
+- [x] `create_subscription` - Create new subscription with automatic entity creation
 - [ ] `edit_subscription` - Modify existing subscription
 - [ ] `delete_subscription` - Remove subscription
 - [ ] `get_subscription` - Detailed subscription info
