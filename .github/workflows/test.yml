@@ -33,7 +33,11 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Run Tests
-        run: bun test
+        env:
+          SKIP_DEV_TESTS: true
+        run: |
+          echo "Running unit and integration tests (skipping dev server tests)..."
+          bun test
 
       - name: Build Project
         run: bun run build

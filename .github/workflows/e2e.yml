@@ -1,0 +1,79 @@
+name: E2E Tests
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: E2E Tests with Wallos
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build MCP server
+        run: bun run build
+
+      - name: Start Wallos test instance
+        run: |
+          docker-compose -f tests/e2e/docker-compose.test.yml up -d
+          echo "Waiting for Wallos to be ready..."
+          
+          # Wait for Wallos to be healthy (max 60 seconds)
+          for i in {1..30}; do
+            if curl -sf "http://localhost:18282/api/health" > /dev/null 2>&1; then
+              echo "✅ Wallos is ready!"
+              break
+            fi
+            echo "⏳ Waiting for Wallos... ($i/30)"
+            sleep 2
+          done
+          
+          # Verify Wallos is actually responding
+          curl -sf "http://localhost:18282/api/health" || (echo "❌ Wallos failed to start" && docker-compose -f tests/e2e/docker-compose.test.yml logs && exit 1)
+
+      - name: Setup Wallos test user
+        run: |
+          echo "Creating test user..."
+          RESPONSE=$(curl -s -X POST "http://localhost:18282/endpoints/user/register.php" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=testuser&password=testpass123&email=test@example.com")
+          echo "User setup response: $RESPONSE"
+
+      - name: Run E2E tests
+        env:
+          E2E_WALLOS_URL: http://localhost:18282
+          WALLOS_URL: http://localhost:18282
+          WALLOS_USERNAME: testuser
+          WALLOS_PASSWORD: testpass123
+        run: |
+          echo "Running E2E tests..."
+          bun test tests/e2e/direct-mcp.test.ts
+
+      - name: Show container logs on failure
+        if: failure()
+        run: |
+          echo "=== Docker Container Logs ==="
+          docker-compose -f tests/e2e/docker-compose.test.yml logs
+          echo "=== Docker Container Status ==="
+          docker-compose -f tests/e2e/docker-compose.test.yml ps
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker-compose -f tests/e2e/docker-compose.test.yml down -v
+          docker volume prune -f --filter "label=com.docker.compose.project=wallos-e2e-test" 2>/dev/null || true

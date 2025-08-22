@@ -33,20 +33,23 @@ try {
   console.warn('Could not load dev/.env.dev, falling back to default .env:', error);
 }
 
-// Skip these tests if environment variables are not set
+// Skip these tests in CI or if environment variables are not set
+const SKIP_DEV_TESTS = process.env.SKIP_DEV_TESTS === 'true';
 const WALLOS_URL = process.env.WALLOS_URL;
 const WALLOS_USERNAME = process.env.WALLOS_USERNAME;
 const WALLOS_PASSWORD = process.env.WALLOS_PASSWORD;
 
 // Debug environment variables
-if (!WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD) {
+if (SKIP_DEV_TESTS) {
+  console.log('Dev integration tests skipped (SKIP_DEV_TESTS=true)');
+} else if (!WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD) {
   console.log('Environment variables status:');
   console.log('WALLOS_URL:', WALLOS_URL ? 'SET' : 'NOT SET');
   console.log('WALLOS_USERNAME:', WALLOS_USERNAME ? 'SET' : 'NOT SET');
   console.log('WALLOS_PASSWORD:', WALLOS_PASSWORD ? 'SET' : 'NOT SET');
 }
 
-const shouldSkip = !WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD;
+const shouldSkip = SKIP_DEV_TESTS || !WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD;
 
 // Test configuration
 const TEST_TIMEOUT = 30000; // 30 seconds for network operations
