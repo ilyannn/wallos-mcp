@@ -6,6 +6,24 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprot
 
 import { WallosClient } from './wallos-client.js';
 import { CreateSubscriptionData } from './types/index.js';
+
+// Type assertion function for MCP arguments with runtime validation
+function assertCreateSubscriptionArgs(args: Record<string, unknown> | undefined): CreateSubscriptionData {
+  if (!args) {
+    throw new Error('Missing arguments for create_subscription');
+  }
+  
+  if (typeof args.name !== 'string') {
+    throw new Error('create_subscription requires name to be a string');
+  }
+  
+  if (typeof args.price !== 'number') {
+    throw new Error('create_subscription requires price to be a number');
+  }
+  
+  // Runtime validation passed, safe to cast
+  return args as unknown as CreateSubscriptionData;
+}
 import { getMasterDataTool, handleGetMasterData } from './tools/master-data.js';
 import {
   addCategoryTool,
@@ -118,7 +136,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
 
     case 'create_subscription':
-      result = await handleCreateSubscription(wallosClient, args as unknown as CreateSubscriptionData);
+      result = await handleCreateSubscription(wallosClient, assertCreateSubscriptionArgs(args));
       break;
 
     default:
