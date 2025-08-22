@@ -699,4 +699,114 @@ Renews monthly`,
       expect(formData.get('frequency')).toBe('1');
     });
   });
+
+  describe('Auto-Renew Defaults', () => {
+    test('should default auto_renew to true when not specified', async () => {
+      const subscriptionData: CreateSubscriptionData = {
+        name: 'Test Auto-Renew Default',
+        price: 12.99,
+        billing_period: 'monthly',
+        // Deliberately omitting auto_renew to test default behavior
+      };
+
+      // Reset mocks
+      mockAxiosInstance.get.mockReset();
+      mockAxiosInstance.post.mockReset();
+
+      // Setup auth
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        status: 302,
+        headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
+      });
+
+      // Get main currency
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { success: true, main_currency: 1, currencies: [] },
+      });
+
+      // Create subscription
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      await client.createSubscription(subscriptionData);
+
+      // Verify auto_renew was set to '1' (true) by default
+      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
+      const formData = lastCall[1] as URLSearchParams;
+      expect(formData.get('auto_renew')).toBe('1');
+    });
+
+    test('should respect explicit auto_renew: false', async () => {
+      const subscriptionData: CreateSubscriptionData = {
+        name: 'Test Auto-Renew False',
+        price: 9.99,
+        billing_period: 'monthly',
+        auto_renew: false, // Explicitly set to false
+      };
+
+      // Reset mocks
+      mockAxiosInstance.get.mockReset();
+      mockAxiosInstance.post.mockReset();
+
+      // Setup auth
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        status: 302,
+        headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
+      });
+
+      // Get main currency
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { success: true, main_currency: 1, currencies: [] },
+      });
+
+      // Create subscription
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      await client.createSubscription(subscriptionData);
+
+      // Verify auto_renew was set to '0' (false)
+      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
+      const formData = lastCall[1] as URLSearchParams;
+      expect(formData.get('auto_renew')).toBe('0');
+    });
+
+    test('should respect explicit auto_renew: true', async () => {
+      const subscriptionData: CreateSubscriptionData = {
+        name: 'Test Auto-Renew True',
+        price: 15.99,
+        billing_period: 'monthly',
+        auto_renew: true, // Explicitly set to true
+      };
+
+      // Reset mocks
+      mockAxiosInstance.get.mockReset();
+      mockAxiosInstance.post.mockReset();
+
+      // Setup auth
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        status: 302,
+        headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
+      });
+
+      // Get main currency
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: { success: true, main_currency: 1, currencies: [] },
+      });
+
+      // Create subscription
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      await client.createSubscription(subscriptionData);
+
+      // Verify auto_renew was set to '1' (true)
+      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
+      const formData = lastCall[1] as URLSearchParams;
+      expect(formData.get('auto_renew')).toBe('1');
+    });
+  });
 });
