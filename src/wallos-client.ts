@@ -13,6 +13,11 @@ import {
   CategoryMutationResponse,
   SubscriptionsResponse,
   SubscriptionFilters,
+  CreateSubscriptionData,
+  SubscriptionMutationResponse,
+  PaymentMethodMutationResponse,
+  CurrencyMutationResponse,
+  HouseholdMemberMutationResponse,
 } from './types/index.js';
 
 export class WallosClient {
@@ -353,5 +358,466 @@ export class WallosClient {
 
     const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
     return response.data;
+  }
+
+  /**
+   * Add a new payment method
+   */
+  async addPaymentMethod(name?: string): Promise<PaymentMethodMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({ action: 'add' });
+    if (name) {
+      params.append('name', name);
+    }
+
+    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Update an existing payment method
+   */
+  async updatePaymentMethod(id: number, name: string): Promise<PaymentMethodMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({
+      action: 'edit',
+      paymentMethodId: id.toString(),
+      name: name,
+    });
+
+    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Delete a payment method
+   */
+  async deletePaymentMethod(id: number): Promise<PaymentMethodMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({
+      action: 'delete',
+      paymentMethodId: id.toString(),
+    });
+
+    const response = await this.client.get(`/endpoints/paymentmethods/paymentmethod.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Add a new currency
+   */
+  async addCurrency(
+    code: string,
+    name?: string,
+    symbol?: string,
+  ): Promise<CurrencyMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({ action: 'add' });
+    params.append('code', code);
+
+    if (name) {
+      params.append('name', name);
+    } else {
+      // Default names for common currencies
+      const defaultNames: Record<string, string> = {
+        USD: 'US Dollar',
+        EUR: 'Euro',
+        GBP: 'British Pound',
+        JPY: 'Japanese Yen',
+        CAD: 'Canadian Dollar',
+        AUD: 'Australian Dollar',
+        CHF: 'Swiss Franc',
+        CNY: 'Chinese Yuan',
+        INR: 'Indian Rupee',
+        MXN: 'Mexican Peso',
+      };
+      params.append('name', defaultNames[code.toUpperCase()] || code);
+    }
+
+    if (symbol) {
+      params.append('symbol', symbol);
+    } else {
+      // Default symbols for common currencies
+      const defaultSymbols: Record<string, string> = {
+        USD: '$',
+        EUR: '€',
+        GBP: '£',
+        JPY: '¥',
+        CAD: 'C$',
+        AUD: 'A$',
+        CHF: 'CHF',
+        CNY: '¥',
+        INR: '₹',
+        MXN: '$',
+      };
+      params.append('symbol', defaultSymbols[code.toUpperCase()] || code);
+    }
+
+    const response = await this.client.get(`/endpoints/currencies/currency.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Helper method to find currency by code
+   */
+  async findCurrencyByCode(code: string): Promise<number | null> {
+    const currenciesResponse = await this.getCurrencies();
+    if (currenciesResponse.success) {
+      const currency = currenciesResponse.currencies.find(
+        (curr) => curr.code.toUpperCase() === code.toUpperCase(),
+      );
+      return currency ? currency.id : null;
+    }
+    return null;
+  }
+
+  /**
+   * Add a new household member
+   */
+  async addHouseholdMember(name: string, email?: string): Promise<HouseholdMemberMutationResponse> {
+    await this.ensureSession();
+
+    const params = new URLSearchParams({ action: 'add' });
+    params.append('name', name);
+
+    if (email) {
+      params.append('email', email);
+    } else {
+      // Generate a default email if not provided
+      const sanitizedName = name.toLowerCase().replace(/\s+/g, '.');
+      params.append('email', `${sanitizedName}@household.local`);
+    }
+
+    const response = await this.client.get(`/endpoints/household/household.php?${params}`);
+    return response.data;
+  }
+
+  /**
+   * Helper method to find household member by name
+   */
+  async findHouseholdMemberByName(name: string): Promise<number | null> {
+    const householdResponse = await this.getHousehold();
+    if (householdResponse.success) {
+      const member = householdResponse.household.find(
+        (m) => m.name.toLowerCase() === name.toLowerCase(),
+      );
+      return member ? member.id : null;
+    }
+    return null;
+  }
+
+  /**
+   * Parse billing period to Wallos cycle value and frequency
+   * Wallos uses: cycle (1=daily, 2=weekly, 3=monthly, 4=yearly) and frequency (multiplier)
+   * We support flexible input like 'monthly', 'bi-weekly', '3 months', etc.
+   */
+  private parseBillingPeriod(
+    period?: string | number,
+    frequency?: number,
+  ): { cycle: number; frequency: number } {
+    // Default to monthly
+    if (!period) {
+      return { cycle: 3, frequency: frequency || 1 };
+    }
+
+    // If period is already a number (1-4), use it directly
+    if (typeof period === 'number' && period >= 1 && period <= 4) {
+      return { cycle: period, frequency: frequency || 1 };
+    }
+
+    // Parse string period
+    const periodStr = String(period).toLowerCase().trim();
+
+    // Direct period mappings
+    const periodMap: Record<string, { cycle: number; frequency: number }> = {
+      daily: { cycle: 1, frequency: 1 },
+      d: { cycle: 1, frequency: 1 },
+      day: { cycle: 1, frequency: 1 },
+      weekly: { cycle: 2, frequency: 1 },
+      w: { cycle: 2, frequency: 1 },
+      week: { cycle: 2, frequency: 1 },
+      biweekly: { cycle: 2, frequency: 2 },
+      'bi-weekly': { cycle: 2, frequency: 2 },
+      fortnightly: { cycle: 2, frequency: 2 },
+      monthly: { cycle: 3, frequency: 1 },
+      m: { cycle: 3, frequency: 1 },
+      month: { cycle: 3, frequency: 1 },
+      quarterly: { cycle: 3, frequency: 3 },
+      q: { cycle: 3, frequency: 3 },
+      quarter: { cycle: 3, frequency: 3 },
+      semiannually: { cycle: 3, frequency: 6 },
+      'semi-annually': { cycle: 3, frequency: 6 },
+      halfyearly: { cycle: 3, frequency: 6 },
+      'half-yearly': { cycle: 3, frequency: 6 },
+      annually: { cycle: 4, frequency: 1 },
+      yearly: { cycle: 4, frequency: 1 },
+      y: { cycle: 4, frequency: 1 },
+      year: { cycle: 4, frequency: 1 },
+    };
+
+    // Check direct mapping
+    if (periodMap[periodStr]) {
+      const result = periodMap[periodStr];
+      // If explicit frequency provided, override
+      return frequency ? { ...result, frequency } : result;
+    }
+
+    // Check for patterns like "2 weeks", "3 months", etc.
+    const match = periodStr.match(/^(\d+)\s*(day|week|month|year)s?$/);
+    if (match) {
+      const num = parseInt(match[1]);
+      const unit = match[2];
+      const unitMap: Record<string, number> = {
+        day: 1,
+        week: 2,
+        month: 3,
+        year: 4,
+      };
+      return { cycle: unitMap[unit], frequency: num };
+    }
+
+    // Default to monthly if unable to parse
+    process.stderr.write(
+      `Warning: Unable to parse billing period "${period}", defaulting to monthly\n`,
+    );
+    return { cycle: 3, frequency: frequency || 1 };
+  }
+
+  /**
+   * Create a new subscription with automatic category, payment method, and currency creation if needed
+   */
+  async createSubscription(data: CreateSubscriptionData): Promise<SubscriptionMutationResponse> {
+    await this.ensureSession();
+
+    // Determine currency ID (create if needed)
+    let currencyId = data.currency_id;
+    if (!currencyId) {
+      if (data.currency_code) {
+        // First try to find existing currency by code
+        const foundCurrencyId = await this.findCurrencyByCode(data.currency_code);
+
+        if (foundCurrencyId) {
+          currencyId = foundCurrencyId;
+        } else {
+          // If not found, create it
+          const currencyResult = await this.addCurrency(data.currency_code);
+          if (currencyResult.success && currencyResult.currency_id) {
+            currencyId = currencyResult.currency_id;
+          } else {
+            throw new Error(
+              `Failed to create currency ${data.currency_code}: ${currencyResult.errorMessage || 'Unknown error'}`,
+            );
+          }
+        }
+      } else {
+        // Default to currency ID 1 (typically main currency)
+        const currenciesRes = await this.getCurrencies();
+        currencyId = currenciesRes.main_currency || 1;
+      }
+    }
+
+    // Determine category ID (always use category_name if provided, even if category_id exists)
+    let categoryId: number | undefined;
+    if (data.category_name) {
+      // First try to find existing category
+      const foundCategoryId = await this.findCategoryByName(data.category_name);
+
+      if (foundCategoryId) {
+        categoryId = foundCategoryId;
+      } else {
+        // If not found, create it
+        const categoryResult = await this.addCategory(data.category_name);
+        if (categoryResult.success && categoryResult.categoryId) {
+          categoryId = categoryResult.categoryId;
+        } else {
+          throw new Error(
+            `Failed to create category: ${categoryResult.errorMessage || 'Unknown error'}`,
+          );
+        }
+      }
+    } else if (data.category_id) {
+      // Only use category_id if category_name not provided
+      categoryId = data.category_id;
+    }
+
+    // Determine payment method ID (create if needed)
+    let paymentMethodId = data.payment_method_id;
+    if (!paymentMethodId && data.payment_method_name) {
+      // First try to find existing payment method
+      const foundPaymentMethodId = await this.findPaymentMethodByName(data.payment_method_name);
+
+      if (foundPaymentMethodId) {
+        paymentMethodId = foundPaymentMethodId;
+      } else {
+        // If not found, create it
+        const paymentResult = await this.addPaymentMethod(data.payment_method_name);
+        if (paymentResult.success && paymentResult.payment_method_id) {
+          paymentMethodId = paymentResult.payment_method_id;
+        } else {
+          throw new Error(
+            `Failed to create payment method: ${paymentResult.errorMessage || 'Unknown error'}`,
+          );
+        }
+      }
+    }
+
+    // Determine payer user ID (always use payer_user_name if provided)
+    let payerUserId: number | undefined;
+    if (data.payer_user_name) {
+      // First try to find existing household member
+      const foundMemberId = await this.findHouseholdMemberByName(data.payer_user_name);
+
+      if (foundMemberId) {
+        payerUserId = foundMemberId;
+      } else {
+        // If not found, create it
+        const memberResult = await this.addHouseholdMember(
+          data.payer_user_name,
+          data.payer_user_email,
+        );
+        if (memberResult.success && memberResult.household_member_id) {
+          payerUserId = memberResult.household_member_id;
+        } else {
+          throw new Error(
+            `Failed to create household member: ${memberResult.errorMessage || 'Unknown error'}`,
+          );
+        }
+      }
+    } else if (data.payer_user_id) {
+      // Only use payer_user_id if payer_user_name not provided
+      payerUserId = data.payer_user_id;
+    }
+
+    // Parse billing period and frequency
+    const { cycle, frequency } = this.parseBillingPeriod(
+      data.billing_period,
+      data.billing_frequency,
+    );
+
+    // Handle dates
+    let startDate = data.start_date;
+    let nextPayment = data.next_payment;
+
+    if (!startDate && !nextPayment) {
+      // Default to today if neither provided
+      const today = new Date().toISOString().split('T')[0];
+      startDate = today;
+      nextPayment = today;
+    } else if (startDate && !nextPayment) {
+      // Calculate next_payment from start_date, ensuring it's in the future
+      const start = new Date(startDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0); // Reset to start of day for fair comparison
+
+      // eslint-disable-next-line prefer-const
+      let next = new Date(start);
+
+      // Keep adding cycles until we reach a future date
+      while (next <= today) {
+        switch (cycle) {
+          case 1: // Daily
+            next.setDate(next.getDate() + frequency);
+            break;
+          case 2: // Weekly
+            next.setDate(next.getDate() + frequency * 7);
+            break;
+          case 3: // Monthly
+            next.setMonth(next.getMonth() + frequency);
+            break;
+          case 4: // Yearly
+            next.setFullYear(next.getFullYear() + frequency);
+            break;
+        }
+      }
+
+      nextPayment = next.toISOString().split('T')[0];
+    } else if (!startDate && nextPayment) {
+      // Use next_payment as start_date if only next_payment provided
+      startDate = nextPayment;
+    }
+
+    // Prepare subscription data
+    const subscriptionParams = new URLSearchParams({
+      name: data.name,
+      price: data.price.toString(),
+      currency_id: currencyId.toString(),
+      cycle: cycle.toString(),
+      frequency: frequency.toString(),
+    });
+
+    if (categoryId) {
+      subscriptionParams.append('category_id', categoryId.toString());
+    }
+    if (paymentMethodId) {
+      subscriptionParams.append('payment_method_id', paymentMethodId.toString());
+    }
+    if (payerUserId) {
+      subscriptionParams.append('payer_user_id', payerUserId.toString());
+    }
+    if (startDate) {
+      subscriptionParams.append('start_date', startDate);
+    }
+    if (nextPayment) {
+      subscriptionParams.append('next_payment', nextPayment);
+    }
+    if (data.auto_renew !== undefined) {
+      subscriptionParams.append('auto_renew', data.auto_renew ? '1' : '0');
+    }
+    if (data.notes) {
+      subscriptionParams.append('notes', data.notes);
+    }
+    if (data.url) {
+      subscriptionParams.append('url', data.url);
+    }
+    if (data.notify !== undefined) {
+      subscriptionParams.append('notify', data.notify ? '1' : '0');
+    }
+    if (data.notify_days_before !== undefined) {
+      subscriptionParams.append('notify_days_before', data.notify_days_before.toString());
+    }
+
+    const response = await this.client.post(
+      '/endpoints/subscriptions/subscription.php',
+      subscriptionParams,
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+      },
+    );
+
+    return response.data;
+  }
+
+  /**
+   * Helper method to find category by name
+   */
+  async findCategoryByName(name: string): Promise<number | null> {
+    const categoriesResponse = await this.getCategories();
+    if (categoriesResponse.success) {
+      const category = categoriesResponse.categories.find(
+        (cat) => cat.name.toLowerCase() === name.toLowerCase(),
+      );
+      return category ? category.id : null;
+    }
+    return null;
+  }
+
+  /**
+   * Helper method to find payment method by name
+   */
+  async findPaymentMethodByName(name: string): Promise<number | null> {
+    const paymentMethodsResponse = await this.getPaymentMethods();
+    if (paymentMethodsResponse.success) {
+      const paymentMethod = paymentMethodsResponse.payment_methods.find(
+        (pm) => pm.name.toLowerCase() === name.toLowerCase(),
+      );
+      return paymentMethod ? paymentMethod.id : null;
+    }
+    return null;
   }
 }

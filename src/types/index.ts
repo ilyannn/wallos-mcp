@@ -155,3 +155,43 @@ export interface SubscriptionFilters {
     | 'alphanumeric';
   convert_currency?: boolean;
 }
+
+// Subscription creation types
+export interface CreateSubscriptionData {
+  name: string;
+  price: number;
+  currency_id?: number; // use existing currency ID
+  currency_code?: string; // currency code (e.g., 'USD', 'EUR') - will create if needed
+  billing_period?: string | number; // Flexible: 'daily', 'weekly', 'monthly', 'yearly', or 1-4
+  billing_frequency?: number; // Multiplier: how many periods (e.g., 2 for bi-weekly, 3 for quarterly)
+  category_name?: string; // if provided, will create category if needed
+  payment_method_name?: string; // if provided, will create payment method if needed
+  category_id?: number; // use existing category
+  payment_method_id?: number; // use existing payment method
+  payer_user_id?: number; // use existing payer user ID
+  payer_user_name?: string; // payer name - will find or create household member
+  payer_user_email?: string; // optional email when creating new household member
+  start_date?: string; // YYYY-MM-DD format - subscription start date
+  next_payment?: string; // YYYY-MM-DD format - if not provided, calculated from start_date + cycle
+  auto_renew?: boolean;
+  notes?: string;
+  url?: string;
+  notify?: boolean;
+  notify_days_before?: number;
+}
+
+export interface SubscriptionMutationResponse extends MutationResponse {
+  subscription_id?: number;
+}
+
+export interface PaymentMethodMutationResponse extends MutationResponse {
+  payment_method_id?: number;
+}
+
+export interface CurrencyMutationResponse extends MutationResponse {
+  currency_id?: number;
+}
+
+export interface HouseholdMemberMutationResponse extends MutationResponse {
+  household_member_id?: number;
+}
