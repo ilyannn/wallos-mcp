@@ -118,7 +118,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
 
     case 'create_subscription':
-      result = await handleCreateSubscription(wallosClient, args as CreateSubscriptionData);
+      result = await handleCreateSubscription(wallosClient, args as unknown as CreateSubscriptionData);
       break;
 
     default:
