@@ -103,3 +103,55 @@ export interface WallosClientConfig {
   password?: string;
   timeout?: number;
 }
+
+// Subscription types
+export interface Subscription {
+  id: number;
+  name: string;
+  logo: string;
+  price: number;
+  currency_id: number;
+  start_date: string;
+  next_payment: string;
+  cycle: number;
+  frequency: number;
+  auto_renew: number;
+  notes: string;
+  payment_method_id: number;
+  payer_user_id: number;
+  category_id: number;
+  notify: number;
+  url: string;
+  inactive: number;
+  notify_days_before: number | null;
+  user_id: number;
+  cancelation_date: string | null;
+  cancellation_date: string;
+  category_name: string;
+  payer_user_name: string;
+  payment_method_name: string;
+  replacement_subscription_id?: number;
+}
+
+export interface SubscriptionsResponse extends WallosResponse {
+  subscriptions: Subscription[];
+}
+
+export interface SubscriptionFilters {
+  member?: string; // comma-separated member IDs
+  category?: string; // comma-separated category IDs
+  payment?: string; // comma-separated payment method IDs
+  state?: '0' | '1'; // 0 = active, 1 = inactive
+  disabled_to_bottom?: boolean;
+  sort?:
+    | 'name'
+    | 'id'
+    | 'next_payment'
+    | 'price'
+    | 'payer_user_id'
+    | 'category_id'
+    | 'payment_method_id'
+    | 'inactive'
+    | 'alphanumeric';
+  convert_currency?: boolean;
+}

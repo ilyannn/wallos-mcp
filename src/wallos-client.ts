@@ -11,6 +11,8 @@ import {
   MasterData,
   SessionInfo,
   CategoryMutationResponse,
+  SubscriptionsResponse,
+  SubscriptionFilters,
 } from './types/index.js';
 
 export class WallosClient {
@@ -108,6 +110,28 @@ export class WallosClient {
    */
   async getHousehold(): Promise<HouseholdResponse> {
     const response = await this.client.get('/api/household/get_household.php');
+    return response.data;
+  }
+
+  /**
+   * Get subscriptions with optional filters
+   */
+  async getSubscriptions(filters?: SubscriptionFilters): Promise<SubscriptionsResponse> {
+    const params: Record<string, string> = {};
+
+    if (filters) {
+      if (filters.member) params.member = filters.member;
+      if (filters.category) params.category = filters.category;
+      if (filters.payment) params.payment = filters.payment;
+      if (filters.state !== undefined) params.state = filters.state;
+      if (filters.disabled_to_bottom !== undefined)
+        params.disabled_to_bottom = filters.disabled_to_bottom.toString();
+      if (filters.sort) params.sort = filters.sort;
+      if (filters.convert_currency !== undefined)
+        params.convert_currency = filters.convert_currency.toString();
+    }
+
+    const response = await this.client.get('/api/subscriptions/get_subscriptions.php', { params });
     return response.data;
   }
 

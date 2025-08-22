@@ -14,6 +14,7 @@ import {
   handleUpdateCategory,
   handleDeleteCategory,
 } from './tools/categories.js';
+import { listSubscriptionsTool, handleListSubscriptions } from './tools/subscriptions.js';
 
 // Get configuration from environment variables
 const WALLOS_URL = process.env.WALLOS_URL || 'http://localhost:8282';
@@ -53,7 +54,7 @@ const server = new Server(
 
 // Register tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  const tools = [getMasterDataTool];
+  const tools = [getMasterDataTool, listSubscriptionsTool];
 
   // Only register mutation tools if credentials are available
   if (WALLOS_USERNAME && WALLOS_PASSWORD) {
@@ -72,6 +73,30 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   switch (name) {
     case 'get_master_data':
       result = await handleGetMasterData(wallosClient);
+      break;
+
+    case 'list_subscriptions':
+      result = await handleListSubscriptions(
+        wallosClient,
+        args as {
+          member_ids?: string;
+          category_ids?: string;
+          payment_method_ids?: string;
+          state?: 'active' | 'inactive';
+          sort?:
+            | 'name'
+            | 'id'
+            | 'next_payment'
+            | 'price'
+            | 'payer_user_id'
+            | 'category_id'
+            | 'payment_method_id'
+            | 'inactive'
+            | 'alphanumeric';
+          disabled_to_bottom?: boolean;
+          convert_currency?: boolean;
+        },
+      );
       break;
 
     case 'add_category':
@@ -130,7 +155,7 @@ async function main(): Promise<void> {
 
   if (WALLOS_API_KEY) {
     process.stderr.write(
-      'Available tools: get_master_data' +
+      'Available tools: get_master_data, list_subscriptions' +
         (WALLOS_USERNAME && WALLOS_PASSWORD
           ? ', add_category, update_category, delete_category'
           : '') +
@@ -143,7 +168,7 @@ async function main(): Promise<void> {
     );
   } else if (WALLOS_USERNAME && WALLOS_PASSWORD) {
     process.stderr.write(
-      'Available tools: get_master_data, add_category, update_category, delete_category\n',
+      'Available tools: get_master_data, list_subscriptions, add_category, update_category, delete_category\n',
     );
     process.stderr.write('Full access enabled (username/password - API key will be retrieved)\n');
   }
