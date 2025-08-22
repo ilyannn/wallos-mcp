@@ -8,11 +8,43 @@ import { WallosClient } from '../src/wallos-client.js';
 import { handleGetMasterData } from '../src/tools/master-data.js';
 import { handleAddCategory, handleDeleteCategory } from '../src/tools/categories.js';
 import type { CreateSubscriptionData } from '../src/types/index.js';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+// Load environment variables from dev/.env.dev
+try {
+  const devEnvPath = join(process.cwd(), 'dev', '.env.dev');
+  const envContent = readFileSync(devEnvPath, 'utf8');
+  
+  // Parse .env file content
+  envContent.split('\n').forEach(line => {
+    line = line.trim();
+    if (line && !line.startsWith('#')) {
+      const [key, ...valueParts] = line.split('=');
+      if (key && valueParts.length > 0) {
+        const value = valueParts.join('=');
+        process.env[key] = value;
+      }
+    }
+  });
+  
+  console.log('Loaded environment variables from dev/.env.dev');
+} catch (error) {
+  console.warn('Could not load dev/.env.dev, falling back to default .env:', error);
+}
 
 // Skip these tests if environment variables are not set
 const WALLOS_URL = process.env.WALLOS_URL;
 const WALLOS_USERNAME = process.env.WALLOS_USERNAME;
 const WALLOS_PASSWORD = process.env.WALLOS_PASSWORD;
+
+// Debug environment variables
+if (!WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD) {
+  console.log('Environment variables status:');
+  console.log('WALLOS_URL:', WALLOS_URL ? 'SET' : 'NOT SET');
+  console.log('WALLOS_USERNAME:', WALLOS_USERNAME ? 'SET' : 'NOT SET');
+  console.log('WALLOS_PASSWORD:', WALLOS_PASSWORD ? 'SET' : 'NOT SET');
+}
 
 const shouldSkip = !WALLOS_URL || !WALLOS_USERNAME || !WALLOS_PASSWORD;
 
@@ -51,7 +83,18 @@ describe.skipIf(shouldSkip)('Dev Server Integration Tests', () => {
 
     console.log('Fetching master data...');
     const masterDataResult = await handleGetMasterData(client);
-    masterData = JSON.parse(masterDataResult).data;
+    console.log('Master data result:', masterDataResult);
+    
+    const parsedResult = JSON.parse(masterDataResult);
+    
+    // Check if we got an error response
+    if (parsedResult.error) {
+      console.error('Master data fetch failed:', parsedResult.error, parsedResult.details);
+      throw new Error(`Master data fetch failed: ${parsedResult.details}`);
+    }
+    
+    // Extract the data from successful response
+    masterData = parsedResult.data;
     
     expect(masterData).toHaveProperty('categories');
     expect(masterData).toHaveProperty('currencies');

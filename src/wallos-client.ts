@@ -790,9 +790,9 @@ export class WallosClient {
     if (nextPayment) {
       formData.append('next_payment', nextPayment);
     }
-    if (data.auto_renew !== undefined) {
-      formData.append('auto_renew', data.auto_renew ? '1' : '0');
-    }
+    // Default auto_renew to true if not specified
+    const autoRenew = data.auto_renew !== undefined ? data.auto_renew : true;
+    formData.append('auto_renew', autoRenew ? '1' : '0');
     if (data.notes) {
       formData.append('notes', data.notes);
     }

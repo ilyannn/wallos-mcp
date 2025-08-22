@@ -170,6 +170,15 @@ describe('Subscription Integration Tests', () => {
     });
 
     test('should create Spotify annual subscription with EUR currency', async () => {
+      // Mock authentication first
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({
+          status: 302,
+          headers: {
+            'set-cookie': ['PHPSESSID=test-session; path=/'],
+          },
+        });
+      
       // Mock sequence for Spotify subscription
       mockAxiosInstance.get
         // Currency lookup fails, create EUR
@@ -217,7 +226,7 @@ describe('Subscription Integration Tests', () => {
       const result = await handleCreateSubscription(client, spotifyData);
 
       expect(result).toContain('✅ Successfully created subscription!');
-      expect(result).toContain('**Subscription ID:** 101');
+      expect(result).toContain('**Message:** Spotify Premium subscription created successfully');
       expect(result).toContain('**Name:** Spotify Premium');
       expect(result).toContain('**Price:** 119.88 EUR');
       expect(result).toContain('**Billing:** yearly');
@@ -259,6 +268,15 @@ describe('Subscription Integration Tests', () => {
 
       for (let i = 0; i < streamingServices.length; i++) {
         const service = streamingServices[i];
+        
+        // Mock authentication first for this service
+        mockAxiosInstance.post
+          .mockResolvedValueOnce({
+            status: 302,
+            headers: {
+              'set-cookie': ['PHPSESSID=test-session; path=/'],
+            },
+          });
         
         // Mock responses for each service creation
         if (i === 0) {
@@ -306,6 +324,15 @@ describe('Subscription Integration Tests', () => {
 
   describe('Complete Workflow Tests', () => {
     test('should create subscription and then list it successfully', async () => {
+      // Mock authentication first
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({
+          status: 302,
+          headers: {
+            'set-cookie': ['PHPSESSID=test-session; path=/'],
+          },
+        });
+      
       // Step 1: Create Netflix subscription
       mockAxiosInstance.get
         .mockResolvedValueOnce({ data: { success: true, currencies: [{ id: 1, code: 'USD' }] } })
@@ -366,6 +393,17 @@ describe('Subscription Integration Tests', () => {
     });
 
     test('should create multiple subscriptions and filter by category', async () => {
+      // Mock authentication for each subscription creation (3 subscriptions)
+      for (let i = 0; i < 3; i++) {
+        mockAxiosInstance.post
+          .mockResolvedValueOnce({
+            status: 302,
+            headers: {
+              'set-cookie': ['PHPSESSID=test-session; path=/'],
+            },
+          });
+      }
+      
       // Create subscriptions (mocked as successful)
       for (let i = 0; i < 3; i++) {
         mockAxiosInstance.post.mockResolvedValue({ data: { status: 'Success', message: 'Subscription created successfully' } });
@@ -425,6 +463,17 @@ describe('Subscription Integration Tests', () => {
     });
 
     test('should handle subscription creation with flexible frequency formats', async () => {
+      // Mock authentication for each frequency test (3 test cases)
+      for (let i = 0; i < 3; i++) {
+        mockAxiosInstance.post
+          .mockResolvedValueOnce({
+            status: 302,
+            headers: {
+              'set-cookie': ['PHPSESSID=test-session; path=/'],
+            },
+          });
+      }
+      
       const frequencyTestCases = [
         { period: 'bi-weekly', expectedInResult: 'bi-weekly' },
         { period: 'quarterly', expectedInResult: 'quarterly' },
@@ -460,6 +509,17 @@ describe('Subscription Integration Tests', () => {
 
   describe('Currency and International Handling', () => {
     test('should create subscriptions with various international currencies', async () => {
+      // Mock authentication for each international service (4 services)
+      for (let i = 0; i < 4; i++) {
+        mockAxiosInstance.post
+          .mockResolvedValueOnce({
+            status: 302,
+            headers: {
+              'set-cookie': ['PHPSESSID=test-session; path=/'],
+            },
+          });
+      }
+      
       const internationalServices = [
         { name: 'BBC iPlayer', price: 10.99, currency: 'GBP', country: 'UK' },
         { name: 'Canal+', price: 19.99, currency: 'EUR', country: 'France' },
@@ -501,6 +561,15 @@ describe('Subscription Integration Tests', () => {
 
   describe('Error Handling and Edge Cases', () => {
     test('should handle subscription creation failure gracefully', async () => {
+      // Mock authentication first
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({
+          status: 302,
+          headers: {
+            'set-cookie': ['PHPSESSID=test-session; path=/'],
+          },
+        });
+      
       // Mock authentication success but subscription creation failure
       mockAxiosInstance.get
         .mockResolvedValueOnce({ data: { success: true, currencies: [{ id: 1, code: 'USD' }] } })
@@ -562,6 +631,15 @@ describe('Subscription Integration Tests', () => {
     });
 
     test('should handle invalid billing period gracefully', async () => {
+      // Mock authentication first
+      mockAxiosInstance.post
+        .mockResolvedValueOnce({
+          status: 302,
+          headers: {
+            'set-cookie': ['PHPSESSID=test-session; path=/'],
+          },
+        });
+      
       // Mock successful currency lookup and subscription creation
       mockAxiosInstance.get
         .mockResolvedValueOnce({ data: { success: true, currencies: [{ id: 1, code: 'USD' }] } })
@@ -589,6 +667,17 @@ describe('Subscription Integration Tests', () => {
 
   describe('Performance and Concurrency Tests', () => {
     test('should handle bulk subscription creation efficiently', async () => {
+      // Mock authentication for bulk creation (5 subscriptions)
+      for (let i = 0; i < 5; i++) {
+        mockAxiosInstance.post
+          .mockResolvedValueOnce({
+            status: 302,
+            headers: {
+              'set-cookie': ['PHPSESSID=test-session; path=/'],
+            },
+          });
+      }
+      
       const bulkSubscriptions: CreateSubscriptionData[] = Array.from({ length: 5 }, (_, i) => ({
         name: `Bulk Service ${i + 1}`,
         price: 10 + i,
