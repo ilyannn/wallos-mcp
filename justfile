@@ -99,6 +99,23 @@ test:
 test-coverage:
   bun run test -- --coverage
 
+# End-to-end testing with real Wallos instance
+e2e-setup:
+  @echo "Setting up E2E test environment..."
+  @chmod +x tests/e2e/*.sh
+  @./tests/e2e/setup-test-env.sh
+
+e2e-test: build
+  @echo "Running E2E tests..."
+  @bun test tests/e2e/direct-mcp-test.ts
+
+e2e-cleanup:
+  @echo "Cleaning up E2E test environment..."
+  @./tests/e2e/cleanup-test-env.sh
+
+e2e: e2e-setup e2e-test e2e-cleanup
+  @echo "E2E test suite complete"
+
 # Clean build artifacts
 clean:
   rm -rf dist/ node_modules/ coverage/

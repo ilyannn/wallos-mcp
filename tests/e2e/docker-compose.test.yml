@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  wallos-test:
+    image: bellamy/wallos:latest
+    container_name: wallos-e2e-test
+    ports:
+      - '18282:80'
+    environment:
+      - TZ=UTC
+    volumes:
+      - wallos-test-data:/var/www/html/db
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost/api/health']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    networks:
+      - e2e-test-network
+
+volumes:
+  wallos-test-data:
+    driver: local
+
+networks:
+  e2e-test-network:
+    driver: bridge
