@@ -79,23 +79,32 @@ bun run build
 
 ### create_subscription
 
-Create a new subscription with automatic entity creation. This powerful tool handles all the complexity of creating related entities automatically.
+Create a new subscription with automatic entity creation. This powerful tool
+handles all the complexity of creating related entities automatically.
 
 **Features:**
-- 🌍 **Currency by Code**: Specify currencies using codes (USD, EUR, GBP, etc.) - automatically creates if doesn't exist
-- 📅 **Flexible Frequency**: Natural language billing periods ('daily', 'weekly', 'monthly', 'quarterly', 'bi-weekly', '3 months')
-- 🏷️ **Smart Entity Creation**: Automatically creates missing categories, payment methods, and household members
-- 👥 **Payer Management**: Specify payer by name with optional email - creates household member if needed
-- 📆 **Intelligent Date Handling**: Smart calculation of next payment date, always ensuring it's in the future
+
+- 🌍 **Currency by Code**: Specify currencies using codes (USD, EUR, GBP,
+  etc.) - automatically creates if doesn't exist
+- 📅 **Flexible Frequency**: Natural language billing periods ('daily',
+  'weekly', 'monthly', 'quarterly', 'bi-weekly', '3 months')
+- 🏷️ **Smart Entity Creation**: Automatically creates missing categories,
+  payment methods, and household members
+- 👥 **Payer Management**: Specify payer by name with optional email -
+  creates household member if needed
+- 📆 **Intelligent Date Handling**: Smart calculation of next payment date,
+  always ensuring it's in the future
 
 **Parameters:**
+
 - `name` (required): Subscription service name
 - `price` (required): Subscription price amount
 - `currency_code`: Currency code (e.g., USD, EUR) - creates if needed
 - `currency_id`: Use existing currency ID (alternative to currency_code)
 - `billing_period`: Flexible period ('monthly', 'quarterly', '2 weeks', etc.)
 - `billing_frequency`: Multiplier for billing period (default: 1)
-- `category_name`: Category name (creates if needed, prioritized over category_id)
+- `category_name`: Category name (creates if needed, prioritized over
+  category_id)
 - `category_id`: Use existing category ID
 - `payment_method_name`: Payment method name (creates if needed)
 - `payment_method_id`: Use existing payment method ID
@@ -111,6 +120,7 @@ Create a new subscription with automatic entity creation. This powerful tool han
 - `notify_days_before`: Days before renewal to notify
 
 **Example Usage:**
+
 ```json
 {
   "name": "Netflix Premium",
@@ -135,6 +145,7 @@ Create a new subscription with automatic entity creation. This powerful tool han
 View all subscriptions with comprehensive filtering options.
 
 **Parameters:**
+
 - `member_ids`: Comma-separated member IDs (e.g., "1,3,5")
 - `category_ids`: Comma-separated category IDs
 - `payment_method_ids`: Comma-separated payment method IDs
@@ -145,7 +156,8 @@ View all subscriptions with comprehensive filtering options.
 
 ### get_master_data
 
-Retrieve all master data (categories, currencies, payment methods, household members) in a single call.
+Retrieve all master data (categories, currencies, payment methods, household
+members) in a single call.
 
 ### Category Management Tools
 
@@ -341,73 +353,25 @@ bunx @modelcontextprotocol/cli test
 
 ## Tool Reference
 
-### Subscription Tools
+For detailed information about available tools, see the
+[Available Tools](#available-tools) section above.
 
-#### list_subscriptions
+### Currently Implemented Tools
 
-Lists all subscriptions with optional filters.
+#### Subscription Management
 
-```typescript
-Parameters:
-- active_only?: boolean
-- category_id?: number
-- sort_by?: 'name' | 'price' | 'next_payment'
-```
+- `create_subscription` - Create new subscription with auto entity creation
+- `list_subscriptions` - List subscriptions with filters
 
-#### add_subscription
+#### Master Data
 
-Creates a new subscription.
+- `get_master_data` - Get all categories, currencies, payment methods, household
 
-```typescript
-Parameters:
-- name: string
-- price: number
-- currency_id: number
-- frequency: number
-- cycle: 'monthly' | 'yearly' | 'weekly'
-- category_id: number
-- payment_method_id: number
-- start_date: string
-- notes?: string
-- url?: string
-```
+#### Category Management
 
-#### edit_subscription
-
-Updates an existing subscription.
-
-```typescript
-Parameters:
-- id: number
-- updates: Partial<Subscription>
-```
-
-### Category Tools
-
-#### manage_categories
-
-Performs CRUD operations on categories.
-
-```typescript
-Parameters:
-- action: 'list' | 'add' | 'edit' | 'delete' | 'sort'
-- name?: string
-- category_id?: number
-- order?: number[]
-```
-
-### Currency Tools
-
-#### manage_currencies
-
-Manages currencies and exchange rates.
-
-```typescript
-Parameters:
-- action: 'list' | 'add' | 'edit' | 'delete' | 'update_rates'
-- currency?: Currency
-- currency_id?: number
-```
+- `add_category` - Add new category
+- `update_category` - Update category name
+- `delete_category` - Delete category (except default)
 
 ## Contributing
 

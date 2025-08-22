@@ -5,6 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { WallosClient } from './wallos-client.js';
+import { CreateSubscriptionData } from './types/index.js';
 import { getMasterDataTool, handleGetMasterData } from './tools/master-data.js';
 import {
   addCategoryTool,
@@ -14,8 +15,8 @@ import {
   handleUpdateCategory,
   handleDeleteCategory,
 } from './tools/categories.js';
-import { 
-  listSubscriptionsTool, 
+import {
+  listSubscriptionsTool,
   handleListSubscriptions,
   createSubscriptionTool,
   handleCreateSubscription,
@@ -117,7 +118,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
 
     case 'create_subscription':
-      result = await handleCreateSubscription(wallosClient, args as any);
+      result = await handleCreateSubscription(wallosClient, args as CreateSubscriptionData);
       break;
 
     default:

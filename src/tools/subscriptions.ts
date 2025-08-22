@@ -175,7 +175,8 @@ export const createSubscriptionTool: Tool = {
       },
       currency_code: {
         type: 'string',
-        description: 'Currency code (e.g., USD, EUR, GBP). Will create currency if it doesn\'t exist',
+        description:
+          "Currency code (e.g., USD, EUR, GBP). Will create currency if it doesn't exist",
       },
       currency_id: {
         type: 'number',
@@ -183,7 +184,8 @@ export const createSubscriptionTool: Tool = {
       },
       billing_period: {
         type: 'string',
-        description: 'Billing period: daily, weekly, monthly, yearly, bi-weekly, quarterly, or expressions like "2 weeks", "3 months"',
+        description:
+          'Billing period: daily, weekly, monthly, yearly, bi-weekly, quarterly, or expressions like "2 weeks", "3 months"',
       },
       billing_frequency: {
         type: 'number',
@@ -191,7 +193,8 @@ export const createSubscriptionTool: Tool = {
       },
       category_name: {
         type: 'string',
-        description: 'Category name (will create if doesn\'t exist). Takes priority over category_id',
+        description:
+          "Category name (will create if doesn't exist). Takes priority over category_id",
       },
       category_id: {
         type: 'number',
@@ -199,7 +202,8 @@ export const createSubscriptionTool: Tool = {
       },
       payment_method_name: {
         type: 'string',
-        description: 'Payment method name (will create if doesn\'t exist). Takes priority over payment_method_id',
+        description:
+          "Payment method name (will create if doesn't exist). Takes priority over payment_method_id",
       },
       payment_method_id: {
         type: 'number',
@@ -207,11 +211,13 @@ export const createSubscriptionTool: Tool = {
       },
       payer_user_name: {
         type: 'string',
-        description: 'Name of the household member who pays (will create if doesn\'t exist). Takes priority over payer_user_id',
+        description:
+          "Name of the household member who pays (will create if doesn't exist). Takes priority over payer_user_id",
       },
       payer_user_email: {
         type: 'string',
-        description: 'Email for new household member (optional, used only when creating new member)',
+        description:
+          'Email for new household member (optional, used only when creating new member)',
       },
       payer_user_id: {
         type: 'number',
@@ -223,7 +229,8 @@ export const createSubscriptionTool: Tool = {
       },
       next_payment: {
         type: 'string',
-        description: 'Next payment date in YYYY-MM-DD format. If not provided, calculated from start_date',
+        description:
+          'Next payment date in YYYY-MM-DD format. If not provided, calculated from start_date',
       },
       auto_renew: {
         type: 'boolean',
@@ -266,7 +273,7 @@ export async function handleCreateSubscription(
     result += `**Subscription ID:** ${response.subscription_id}\n`;
     result += `**Name:** ${args.name}\n`;
     result += `**Price:** ${args.price}`;
-    
+
     if (args.currency_code) {
       result += ` ${args.currency_code}`;
     } else if (args.currency_id) {
@@ -332,7 +339,8 @@ export async function handleCreateSubscription(
       result += `**Notes:** ${args.notes}\n`;
     }
 
-    result += '\n💡 **Tip:** Any categories, payment methods, currencies, or household members were automatically created if they didn\'t exist.';
+    result +=
+      "\n💡 **Tip:** Any categories, payment methods, currencies, or household members were automatically created if they didn't exist.";
 
     return result;
   } catch (error) {

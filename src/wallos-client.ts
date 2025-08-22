@@ -742,6 +742,7 @@ export class WallosClient {
 
     // Prepare subscription data
     const subscriptionParams = new URLSearchParams({
+      action: 'add',
       name: data.name,
       price: data.price.toString(),
       currency_id: currencyId.toString(),
@@ -780,14 +781,8 @@ export class WallosClient {
       subscriptionParams.append('notify_days_before', data.notify_days_before.toString());
     }
 
-    const response = await this.client.post(
-      '/endpoints/subscriptions/subscription.php',
-      subscriptionParams,
-      {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-      },
+    const response = await this.client.get(
+      `/endpoints/subscriptions/subscription.php?${subscriptionParams}`,
     );
 
     return response.data;

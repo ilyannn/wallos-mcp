@@ -138,21 +138,15 @@ describe('Subscription Creation', () => {
         },
       });
       
-      // Second call: subscription creation
-      mockAxiosInstance.post.mockResolvedValueOnce({
+      // Mock subscription creation
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: { success: true, subscription_id: 10 },
       });
 
       const result = await client.createSubscription(subscriptionData);
 
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/endpoints/subscriptions/subscription.php',
-        expect.any(URLSearchParams),
-        expect.objectContaining({
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }),
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        expect.stringContaining('/endpoints/subscriptions/subscription.php?'),
       );
 
       expect(result.success).toBe(true);
@@ -206,7 +200,7 @@ describe('Subscription Creation', () => {
       });
 
       // Mock subscription creation
-      mockAxiosInstance.post.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: { success: true, subscription_id: 12 },
       });
 
@@ -223,10 +217,8 @@ describe('Subscription Creation', () => {
       );
 
       // Verify subscription creation was called
-      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/endpoints/subscriptions/subscription.php',
-        expect.any(URLSearchParams),
-        expect.any(Object),
+      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
+        expect.stringContaining('/endpoints/subscriptions/subscription.php?'),
       );
 
       expect(result.success).toBe(true);
@@ -519,7 +511,7 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.post.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: { success: true, subscription_id: 20 },
       });
 
@@ -529,8 +521,9 @@ Renews monthly`,
       expect(result.subscription_id).toBe(20);
 
       // Verify dates were set
-      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
-      const params = lastCall[1] as URLSearchParams;
+      const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
+      const url = lastCall[0] as string;
+      const params = new URLSearchParams(url.split('?')[1]);
       expect(params.get('start_date')).toBe('2025-01-01');
       expect(params.get('next_payment')).toBe('2025-09-01'); // 8 months after (monthly billing)
       expect(params.get('payer_user_id')).toBe('5');
@@ -580,7 +573,7 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.post.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: { success: true, subscription_id: 15 },
       });
 
@@ -632,15 +625,16 @@ Renews monthly`,
         });
 
         // Create subscription
-        mockAxiosInstance.post.mockResolvedValueOnce({
+        mockAxiosInstance.get.mockResolvedValueOnce({
           data: { success: true, subscription_id: 100 },
         });
 
         await client.createSubscription(subscriptionData);
 
         // Verify the cycle and frequency parameters were set correctly
-        const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
-        const params = lastCall[1] as URLSearchParams;
+        const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
+        const url = lastCall[0] as string;
+        const params = new URLSearchParams(url.split('?')[1]);
         expect(params.get('cycle')).toBe(testCase.expectedCycle.toString());
         expect(params.get('frequency')).toBe(testCase.expectedFreq.toString());
       }
@@ -669,7 +663,7 @@ Renews monthly`,
       });
 
       // Create subscription
-      mockAxiosInstance.post.mockResolvedValueOnce({
+      mockAxiosInstance.get.mockResolvedValueOnce({
         data: { success: true, subscription_id: 100 },
       });
 
@@ -685,8 +679,9 @@ Renews monthly`,
       );
 
       // Should default to monthly (cycle: 3, frequency: 1)
-      const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
-      const params = lastCall[1] as URLSearchParams;
+      const lastCall = mockAxiosInstance.get.mock.calls[mockAxiosInstance.get.mock.calls.length - 1];
+      const url = lastCall[0] as string;
+      const params = new URLSearchParams(url.split('?')[1]);
       expect(params.get('cycle')).toBe('3');
       expect(params.get('frequency')).toBe('1');
     });
