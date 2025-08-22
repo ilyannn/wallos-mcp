@@ -32,7 +32,7 @@ jobs:
         run: |
           docker compose -f tests/e2e/docker-compose.test.yml up -d
           echo "Waiting for Wallos to be ready..."
-          
+
           # Wait for Wallos to be healthy (max 60 seconds)
           for i in {1..30}; do
             if curl -sf "http://localhost:18282/" > /dev/null 2>&1; then
@@ -42,7 +42,7 @@ jobs:
             echo "⏳ Waiting for Wallos... ($i/30)"
             sleep 2
           done
-          
+
           # Verify Wallos is actually responding
           curl -sf "http://localhost:18282/" || (echo "❌ Wallos failed to start" && docker compose -f tests/e2e/docker-compose.test.yml logs && exit 1)
 
