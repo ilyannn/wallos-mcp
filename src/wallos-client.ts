@@ -1012,7 +1012,9 @@ export class WallosClient {
       throw new Error(`Failed to edit subscription: ${response.data.message || 'Unknown error'}`);
     }
     if ('success' in response.data && response.data.success === false) {
-      throw new Error(`Failed to edit subscription: ${response.data.errorMessage || 'Unknown error'}`);
+      throw new Error(
+        `Failed to edit subscription: ${response.data.errorMessage || 'Unknown error'}`,
+      );
     }
 
     // After successful edit, fetch the full subscription data
