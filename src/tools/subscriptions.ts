@@ -1,6 +1,10 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { WallosClient } from '../wallos-client.js';
-import { SubscriptionFilters, CreateSubscriptionData, EditSubscriptionData } from '../types/index.js';
+import {
+  SubscriptionFilters,
+  CreateSubscriptionData,
+  EditSubscriptionData,
+} from '../types/index.js';
 
 export const listSubscriptionsTool: Tool = {
   name: 'list_subscriptions',
@@ -437,9 +441,7 @@ export async function handleEditSubscription(
       }
     } else if ('success' in response) {
       if (!response.success) {
-        throw new Error(
-          `Failed to edit subscription: ${response.errorMessage || 'Unknown error'}`,
-        );
+        throw new Error(`Failed to edit subscription: ${response.errorMessage || 'Unknown error'}`);
       }
     } else {
       throw new Error('Invalid response format from subscription edit');

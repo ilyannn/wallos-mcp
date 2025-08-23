@@ -86,7 +86,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
   // Only register mutation tools if credentials are available
   if (WALLOS_USERNAME && WALLOS_PASSWORD) {
-    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool, createSubscriptionTool, editSubscriptionTool);
+    tools.push(
+      addCategoryTool,
+      updateCategoryTool,
+      deleteCategoryTool,
+      createSubscriptionTool,
+      editSubscriptionTool,
+    );
   }
 
   return { tools };

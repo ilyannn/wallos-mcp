@@ -684,7 +684,7 @@ export class WallosClient {
     if (data.payer_user_name) {
       // Try to find existing household member
       const foundMemberId = await this.findHouseholdMemberByName(data.payer_user_name);
-      
+
       if (foundMemberId) {
         payerUserId = foundMemberId;
       } else {
@@ -995,7 +995,7 @@ export class WallosClient {
       formData.append('url', data.url);
     }
     if (data.notify !== undefined) {
-      formData.append('notifications', data.notify ? '1' : '0');
+      formData.append('notify', data.notify ? '1' : '0');
     }
     if (data.notify_days_before !== undefined) {
       formData.append('notify_days_before', data.notify_days_before.toString());
@@ -1006,6 +1006,14 @@ export class WallosClient {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
     });
+
+    // Check for errors in response
+    if ('status' in response.data && response.data.status === 'Error') {
+      throw new Error(`Failed to edit subscription: ${response.data.message || 'Unknown error'}`);
+    }
+    if ('success' in response.data && response.data.success === false) {
+      throw new Error(`Failed to edit subscription: ${response.data.errorMessage || 'Unknown error'}`);
+    }
 
     // After successful edit, fetch the full subscription data
     const subscriptionsResponse = await this.getSubscriptions();

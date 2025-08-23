@@ -44,6 +44,38 @@ mock.module('tough-cookie', () => ({
   CookieJar: mock(() => mockCookieJar),
 }));
 
+// Helper to setup default mocks after reset
+const setupDefaultMocks = () => {
+  // Setup default implementation that handles multiple endpoints
+  const originalImplementation = mockAxiosInstance.get.getMockImplementation();
+  mockAxiosInstance.get.mockImplementation((url) => {
+    if (url === '/api/subscriptions/get_subscriptions.php') {
+      return Promise.resolve({
+        data: {
+          success: true,
+          subscriptions: [],
+          notes: [],
+        },
+      });
+    }
+    if (url === '/api/household/get_household.php') {
+      return Promise.resolve({
+        data: {
+          success: true,
+          household: [
+            { id: 1, name: 'Main User', email: 'main@example.com', in_use: true },
+          ],
+        },
+      });
+    }
+    // For other endpoints, continue with original or return undefined
+    if (originalImplementation) {
+      return originalImplementation(url);
+    }
+    return undefined;
+  });
+};
+
 describe('Subscription Creation', () => {
   let client: WallosClient;
   let stderrSpy: ReturnType<typeof mock>;
@@ -200,6 +232,7 @@ describe('Subscription Creation', () => {
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // First call: authentication
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -273,6 +306,7 @@ describe('Subscription Creation', () => {
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // First call: authentication
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -310,6 +344,7 @@ describe('Subscription Creation', () => {
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // First call: authentication
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -524,6 +559,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Authentication
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -541,14 +577,36 @@ Renews monthly`,
         data: { success: true, household: [] },
       });
 
-      // Create household member
+      // Get household again to find default user (since 'Dad' not found)
       mockAxiosInstance.get.mockResolvedValueOnce({
-        data: { success: true, household_member_id: 5 },
+        data: { 
+          success: true, 
+          household: [
+            { id: 1, name: 'Main User', email: 'main@example.com', in_use: true }
+          ] 
+        },
       });
 
       // Create subscription
       mockAxiosInstance.post.mockResolvedValueOnce({
         data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      // Get subscriptions (called after creation to fetch full data)
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Family Netflix',
+            price: 19.99,
+            payer_user_name: 'Main User', // Default user since 'Dad' wasn't found
+            inactive: 0,
+            auto_renew: 1,
+            notify: 0,
+          }],
+          notes: [],
+        },
       });
 
       const result = await client.createSubscription(subscriptionData);
@@ -582,6 +640,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Authentication
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -651,6 +710,7 @@ Renews monthly`,
         // Reset mocks
         mockAxiosInstance.get.mockReset();
         mockAxiosInstance.post.mockReset();
+        setupDefaultMocks();
 
         // Setup auth
         mockAxiosInstance.post.mockResolvedValueOnce({
@@ -688,6 +748,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Setup auth
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -736,6 +797,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Setup auth
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -772,6 +834,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Setup auth
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -808,6 +871,7 @@ Renews monthly`,
       // Reset mocks
       mockAxiosInstance.get.mockReset();
       mockAxiosInstance.post.mockReset();
+      setupDefaultMocks();
 
       // Setup auth
       mockAxiosInstance.post.mockResolvedValueOnce({
