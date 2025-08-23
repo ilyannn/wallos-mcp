@@ -80,7 +80,7 @@ jobs:
           # Show container status for debugging
           echo "📊 Container status:"
           docker compose -f tests/e2e/docker-compose.test.yml ps
-          
+
           # Wait for Wallos to be healthy (max 120 seconds with more detailed feedback)
           for i in {1..60}; do
             if curl -sf -m 5 "http://localhost:18282/" > /dev/null 2>&1; then
