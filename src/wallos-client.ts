@@ -339,6 +339,9 @@ export class WallosClient {
     }
 
     const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    if (!response || !response.data) {
+      throw new Error('Invalid response from add category API');
+    }
     return response.data;
   }
 
@@ -389,6 +392,9 @@ export class WallosClient {
     }
 
     const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
+    if (!response || !response.data) {
+      throw new Error('Invalid response from add payment method API');
+    }
     return response.data;
   }
 
@@ -475,6 +481,9 @@ export class WallosClient {
     }
 
     const response = await this.client.get(`/endpoints/currency/currency.php?${params}`);
+    if (!response || !response.data) {
+      throw new Error('Invalid response from add currency API');
+    }
     return response.data;
   }
 
@@ -829,20 +838,38 @@ export class WallosClient {
       },
     });
 
+    // Validate response data
+    if (!response || !response.data) {
+      throw new Error('Invalid response from subscription creation API');
+    }
+
+    // Check for API errors in response
+    if ('status' in response.data && response.data.status === 'Error') {
+      throw new Error(`Failed to create subscription: ${response.data.message || 'Unknown error'}`);
+    }
+    if ('success' in response.data && response.data.success === false) {
+      throw new Error(`Failed to create subscription: ${response.data.errorMessage || 'Unknown error'}`);
+    }
+
     // After successful creation, fetch the full subscription data
     // We need to get all subscriptions and find the one we just created
-    const subscriptionsResponse = await this.getSubscriptions();
-    if (subscriptionsResponse.success && subscriptionsResponse.subscriptions.length > 0) {
-      // Find the subscription we just created (should be the most recent one with our name)
-      const newSubscription = subscriptionsResponse.subscriptions.find(
-        (sub) => sub.name === data.name,
-      );
-      if (newSubscription) {
-        return {
-          ...response.data,
-          subscription: newSubscription,
-        };
+    try {
+      const subscriptionsResponse = await this.getSubscriptions();
+      if (subscriptionsResponse && subscriptionsResponse.success && subscriptionsResponse.subscriptions && subscriptionsResponse.subscriptions.length > 0) {
+        // Find the subscription we just created (should be the most recent one with our name)
+        const newSubscription = subscriptionsResponse.subscriptions.find(
+          (sub) => sub.name === data.name,
+        );
+        if (newSubscription) {
+          return {
+            ...response.data,
+            subscription: newSubscription,
+          };
+        }
       }
+    } catch (error) {
+      // If fetching subscriptions fails, just return the creation response
+      process.stderr.write(`Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
     }
 
     return response.data;
@@ -1036,6 +1063,11 @@ export class WallosClient {
       },
     });
 
+    // Validate response data
+    if (!response || !response.data) {
+      throw new Error('Invalid response from subscription edit API');
+    }
+
     // Check for errors in response
     if ('status' in response.data && response.data.status === 'Error') {
       throw new Error(`Failed to edit subscription: ${response.data.message || 'Unknown error'}`);
@@ -1047,15 +1079,20 @@ export class WallosClient {
     }
 
     // After successful edit, fetch the full subscription data
-    const subscriptionsResponse = await this.getSubscriptions();
-    if (subscriptionsResponse.success && subscriptionsResponse.subscriptions.length > 0) {
-      const updatedSubscription = subscriptionsResponse.subscriptions.find((sub) => sub.id === id);
-      if (updatedSubscription) {
-        return {
-          ...response.data,
-          subscription: updatedSubscription,
-        };
+    try {
+      const subscriptionsResponse = await this.getSubscriptions();
+      if (subscriptionsResponse && subscriptionsResponse.success && subscriptionsResponse.subscriptions && subscriptionsResponse.subscriptions.length > 0) {
+        const updatedSubscription = subscriptionsResponse.subscriptions.find((sub) => sub.id === id);
+        if (updatedSubscription) {
+          return {
+            ...response.data,
+            subscription: updatedSubscription,
+          };
+        }
       }
+    } catch (error) {
+      // If fetching subscriptions fails, just return the edit response
+      process.stderr.write(`Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
     }
 
     return response.data;

@@ -11,7 +11,7 @@ services:
     volumes:
       - wallos-test-data:/var/www/html/db
     healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost/api/health']
+      test: ['CMD', 'curl', '-f', 'http://localhost/']
       interval: 5s
       timeout: 3s
       retries: 10

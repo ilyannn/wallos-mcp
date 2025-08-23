@@ -27,7 +27,7 @@ docker-compose -f tests/e2e/docker-compose.test.yml up -d
 # Wait for Wallos to be ready
 echo -e "${YELLOW}Waiting for Wallos to be ready...${NC}"
 for i in {1..30}; do
-    if curl -sf "${WALLOS_URL}/api/health" > /dev/null 2>&1; then
+    if curl -sf "${WALLOS_URL}/" > /dev/null 2>&1; then
         echo -e "${GREEN}Wallos is ready!${NC}"
         break
     fi
