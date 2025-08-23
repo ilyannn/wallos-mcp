@@ -1,11 +1,18 @@
 name: E2E Tests
 
 on:
-  push:
-    branches: [master, main]
-  pull_request:
-    branches: [master, main]
   workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Enable debug logging'
+        type: boolean
+        required: false
+        default: false
+      test_filter:
+        description: 'Test name filter (optional)'
+        type: string
+        required: false
+        default: ''
 
 jobs:
   e2e-tests:
@@ -14,6 +21,23 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      - name: Check for required secrets
+        run: |
+          echo "🔍 Checking for required API keys..."
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not configured"
+            echo "::error::ANTHROPIC_API_KEY is required for E2E tests. Please add it to repository secrets."
+            exit 1
+          fi
+          echo "✅ All required secrets are configured"
+
+      - name: Setup test environment info
+        run: |
+          echo "📋 Test Configuration:"
+          echo "  - Debug mode: ${{ inputs.debug_enabled }}"
+          echo "  - Test filter: ${{ inputs.test_filter || 'All tests' }}"
+          echo "  - Runner: ${{ runner.os }}"
+          echo "  - Triggered by: ${{ github.actor }}"
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -60,20 +84,133 @@ jobs:
           WALLOS_URL: http://localhost:18282
           WALLOS_USERNAME: testuser
           WALLOS_PASSWORD: testpass123
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DEBUG: ${{ inputs.debug_enabled && 'true' || '' }}
         run: |
-          echo "Running E2E tests..."
-          bun test tests/e2e/direct-mcp.test.ts
+          echo "🧪 Running E2E tests..."
+          echo "================================"
+          
+          # Run tests with detailed output and capture results
+          TEST_FILTER="${{ inputs.test_filter }}"
+          if [ -n "$TEST_FILTER" ]; then
+            echo "📌 Running tests matching: $TEST_FILTER"
+            OUTPUT=$(bun test tests/e2e/direct-mcp.test.ts --test-name-filter="$TEST_FILTER" 2>&1) || TEST_EXIT_CODE=$?
+          else
+            OUTPUT=$(bun test tests/e2e/direct-mcp.test.ts 2>&1) || TEST_EXIT_CODE=$?
+          fi
+          
+          echo "$OUTPUT"
+          
+          # Parse test results
+          PASSED=$(echo "$OUTPUT" | grep -oE '[0-9]+ pass' | grep -oE '[0-9]+' || echo "0")
+          FAILED=$(echo "$OUTPUT" | grep -oE '[0-9]+ fail' | grep -oE '[0-9]+' || echo "0")
+          SKIPPED=$(echo "$OUTPUT" | grep -oE '[0-9]+ skip' | grep -oE '[0-9]+' || echo "0")
+          
+          echo ""
+          echo "📊 Test Results Summary:"
+          echo "================================"
+          echo "  ✅ Passed: $PASSED"
+          echo "  ❌ Failed: $FAILED"
+          echo "  ⏭️  Skipped: $SKIPPED"
+          echo "================================"
+          
+          # Check for skipped tests and fail if found
+          if [ "$SKIPPED" -gt 0 ]; then
+            echo ""
+            echo "::error::$SKIPPED test(s) were skipped. This usually indicates missing API keys or configuration issues."
+            echo "❌ E2E tests cannot be skipped - they must either pass or fail explicitly"
+            exit 1
+          fi
+          
+          # Check for test failures
+          if [ "$FAILED" -gt 0 ] || [ "${TEST_EXIT_CODE:-0}" -ne 0 ]; then
+            echo ""
+            echo "::error::$FAILED test(s) failed. See output above for details."
+            exit 1
+          fi
+          
+          # Success case
+          if [ "$PASSED" -eq 0 ]; then
+            echo ""
+            echo "::warning::No tests were executed. Check test file and configuration."
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All E2E tests passed successfully!"
+
+      - name: Collect test artifacts
+        if: always()
+        run: |
+          echo "📦 Collecting test artifacts..."
+          mkdir -p test-artifacts
+          
+          # Capture container logs
+          docker compose -f tests/e2e/docker-compose.test.yml logs > test-artifacts/docker-logs.txt 2>&1 || true
+          
+          # Capture container status
+          docker compose -f tests/e2e/docker-compose.test.yml ps > test-artifacts/docker-status.txt 2>&1 || true
+          
+          # If debug mode, capture more detailed info
+          if [ "${{ inputs.debug_enabled }}" = "true" ]; then
+            docker inspect wallos-e2e-test > test-artifacts/container-inspect.json 2>&1 || true
+            curl -s "http://localhost:18282/api/v1/info" > test-artifacts/wallos-api-info.json 2>&1 || true
+          fi
+          
+          echo "📄 Artifacts collected in test-artifacts/"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results-${{ github.run_id }}
+          path: test-artifacts/
+          retention-days: 7
 
       - name: Show container logs on failure
         if: failure()
         run: |
-          echo "=== Docker Container Logs ==="
-          docker compose -f tests/e2e/docker-compose.test.yml logs
-          echo "=== Docker Container Status ==="
+          echo "=== 🔴 Test Failed - Diagnostic Information ==="
+          echo ""
+          echo "📋 Docker Container Logs:"
+          echo "================================"
+          docker compose -f tests/e2e/docker-compose.test.yml logs --tail=100
+          echo ""
+          echo "📊 Docker Container Status:"
+          echo "================================"
           docker compose -f tests/e2e/docker-compose.test.yml ps
+          echo ""
+          echo "🔍 Network Status:"
+          echo "================================"
+          docker network ls
+          echo ""
+          echo "💾 Volume Status:"
+          echo "================================"
+          docker volume ls | grep wallos || echo "No Wallos volumes found"
 
       - name: Cleanup
         if: always()
         run: |
+          echo "🧹 Cleaning up test environment..."
           docker compose -f tests/e2e/docker-compose.test.yml down -v
           docker volume prune -f --filter "label=com.docker.compose.project=wallos-e2e-test" 2>/dev/null || true
+          echo "✅ Cleanup complete"
+
+      - name: Post test summary
+        if: always()
+        run: |
+          echo "## 📊 E2E Test Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Run ID:** ${{ github.run_id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Debug mode:** ${{ inputs.debug_enabled && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Test filter:** ${{ inputs.test_filter || 'None (all tests)' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "### ✅ Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### ❌ Status: FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Check the logs above for detailed error information." >> $GITHUB_STEP_SUMMARY
+          fi
