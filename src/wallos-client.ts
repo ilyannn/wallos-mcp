@@ -848,14 +848,21 @@ export class WallosClient {
       throw new Error(`Failed to create subscription: ${response.data.message || 'Unknown error'}`);
     }
     if ('success' in response.data && response.data.success === false) {
-      throw new Error(`Failed to create subscription: ${response.data.errorMessage || 'Unknown error'}`);
+      throw new Error(
+        `Failed to create subscription: ${response.data.errorMessage || 'Unknown error'}`,
+      );
     }
 
     // After successful creation, fetch the full subscription data
     // We need to get all subscriptions and find the one we just created
     try {
       const subscriptionsResponse = await this.getSubscriptions();
-      if (subscriptionsResponse && subscriptionsResponse.success && subscriptionsResponse.subscriptions && subscriptionsResponse.subscriptions.length > 0) {
+      if (
+        subscriptionsResponse &&
+        subscriptionsResponse.success &&
+        subscriptionsResponse.subscriptions &&
+        subscriptionsResponse.subscriptions.length > 0
+      ) {
         // Find the subscription we just created (should be the most recent one with our name)
         const newSubscription = subscriptionsResponse.subscriptions.find(
           (sub) => sub.name === data.name,
@@ -869,7 +876,9 @@ export class WallosClient {
       }
     } catch (error) {
       // If fetching subscriptions fails, just return the creation response
-      process.stderr.write(`Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
+      process.stderr.write(
+        `Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+      );
     }
 
     return response.data;
@@ -1081,8 +1090,15 @@ export class WallosClient {
     // After successful edit, fetch the full subscription data
     try {
       const subscriptionsResponse = await this.getSubscriptions();
-      if (subscriptionsResponse && subscriptionsResponse.success && subscriptionsResponse.subscriptions && subscriptionsResponse.subscriptions.length > 0) {
-        const updatedSubscription = subscriptionsResponse.subscriptions.find((sub) => sub.id === id);
+      if (
+        subscriptionsResponse &&
+        subscriptionsResponse.success &&
+        subscriptionsResponse.subscriptions &&
+        subscriptionsResponse.subscriptions.length > 0
+      ) {
+        const updatedSubscription = subscriptionsResponse.subscriptions.find(
+          (sub) => sub.id === id,
+        );
         if (updatedSubscription) {
           return {
             ...response.data,
@@ -1092,7 +1108,9 @@ export class WallosClient {
       }
     } catch (error) {
       // If fetching subscriptions fails, just return the edit response
-      process.stderr.write(`Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`);
+      process.stderr.write(
+        `Warning: Could not fetch updated subscription data: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+      );
     }
 
     return response.data;

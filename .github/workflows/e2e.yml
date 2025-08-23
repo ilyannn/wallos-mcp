@@ -81,7 +81,7 @@ jobs:
             -H "Content-Type: application/x-www-form-urlencoded" \
             -d "username=testuser&password=testpass123&email=test@example.com" || echo "Registration endpoint not available")
           echo "User setup response: $RESPONSE"
-          
+
           # Also try alternative registration methods or check if user already exists
           echo "Checking if Wallos has default credentials or setup is needed..."
           LOGIN_TEST=$(curl -s -X POST "http://localhost:18282/login.php" \
