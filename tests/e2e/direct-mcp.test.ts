@@ -21,16 +21,52 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
 
   beforeAll(async () => {
     // Check if Wallos is running (same check as workflow)
+    console.log(`🔍 Checking Wallos availability at ${WALLOS_URL}...`);
+    
     try {
-      const response = await fetch(`${WALLOS_URL}/`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${WALLOS_URL}/`, { 
+        signal: controller.signal,
+        headers: { 'User-Agent': 'E2E-Test-Health-Check' }
+      });
+      clearTimeout(timeoutId);
+      
       isWallosRunning = response.ok;
-    } catch {
+      
+      if (isWallosRunning) {
+        console.log('✅ Wallos instance is running and responsive');
+        
+        // Test login endpoint as well
+        try {
+          const loginTest = await fetch(`${WALLOS_URL}/login.php`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'User-Agent': 'E2E-Test-Login-Check'
+            },
+            body: 'username=test&password=changeme'
+          });
+          console.log(`🔐 Login endpoint status: ${loginTest.status}`);
+        } catch (loginError) {
+          console.warn(`⚠️  Login endpoint test failed: ${loginError}`);
+        }
+      } else {
+        console.warn(`❌ Wallos responded with status: ${response.status} ${response.statusText}`);
+      }
+    } catch (error) {
       console.warn('⚠️  Wallos test instance not running. Skipping E2E tests.');
+      console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
       console.warn('   Run: ./tests/e2e/setup-test-env.sh to start Wallos');
+      console.warn(`   Expected URL: ${WALLOS_URL}`);
       return;
     }
 
-    if (!isWallosRunning) return;
+    if (!isWallosRunning) {
+      console.warn('❌ Wallos is not accessible - all E2E tests will be skipped');
+      return;
+    }
 
     // Initialize Wallos client
     wallosClient = new WallosClient({
