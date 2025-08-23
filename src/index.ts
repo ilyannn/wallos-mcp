@@ -5,7 +5,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 
 import { WallosClient } from './wallos-client.js';
-import { CreateSubscriptionData } from './types/index.js';
+import { CreateSubscriptionData, EditSubscriptionData } from './types/index.js';
 
 // Type assertion function for MCP arguments with runtime validation
 function assertCreateSubscriptionArgs(
@@ -40,6 +40,8 @@ import {
   handleListSubscriptions,
   createSubscriptionTool,
   handleCreateSubscription,
+  editSubscriptionTool,
+  handleEditSubscription,
 } from './tools/subscriptions.js';
 
 // Get configuration from environment variables
@@ -84,7 +86,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
   // Only register mutation tools if credentials are available
   if (WALLOS_USERNAME && WALLOS_PASSWORD) {
-    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool, createSubscriptionTool);
+    tools.push(addCategoryTool, updateCategoryTool, deleteCategoryTool, createSubscriptionTool, editSubscriptionTool);
   }
 
   return { tools };
@@ -141,6 +143,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       result = await handleCreateSubscription(wallosClient, assertCreateSubscriptionArgs(args));
       break;
 
+    case 'edit_subscription': {
+      if (!args || typeof args.id !== 'number') {
+        throw new Error('edit_subscription requires id to be a number');
+      }
+      const editArgs = args as unknown as { id: number } & EditSubscriptionData;
+      result = await handleEditSubscription(wallosClient, editArgs);
+      break;
+    }
+
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -187,7 +198,7 @@ async function main(): Promise<void> {
     process.stderr.write(
       'Available tools: get_master_data, list_subscriptions' +
         (WALLOS_USERNAME && WALLOS_PASSWORD
-          ? ', add_category, update_category, delete_category'
+          ? ', add_category, update_category, delete_category, create_subscription, edit_subscription'
           : '') +
         '\n',
     );
@@ -198,7 +209,7 @@ async function main(): Promise<void> {
     );
   } else if (WALLOS_USERNAME && WALLOS_PASSWORD) {
     process.stderr.write(
-      'Available tools: get_master_data, list_subscriptions, add_category, update_category, delete_category\n',
+      'Available tools: get_master_data, list_subscriptions, add_category, update_category, delete_category, create_subscription, edit_subscription\n',
     );
     process.stderr.write('Full access enabled (username/password - API key will be retrieved)\n');
   }

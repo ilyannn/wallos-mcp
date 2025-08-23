@@ -163,6 +163,10 @@ export interface SubscriptionFilters {
 }
 
 // Subscription creation types
+export interface EditSubscriptionData extends Partial<CreateSubscriptionData> {
+  // All fields are optional for editing
+}
+
 export interface CreateSubscriptionData {
   name: string;
   price: number;
@@ -188,8 +192,8 @@ export interface CreateSubscriptionData {
 
 // Union type to support both old and new response formats
 export type SubscriptionMutationResponse =
-  | (MutationResponse & { subscription_id?: number })
-  | (WallosApiResponse & { subscription_id?: number });
+  | (MutationResponse & { subscription_id?: number; subscription?: Subscription })
+  | (WallosApiResponse & { subscription_id?: number; subscription?: Subscription });
 
 export type PaymentMethodMutationResponse =
   | (MutationResponse & { payment_method_id?: number })

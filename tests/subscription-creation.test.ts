@@ -78,6 +78,30 @@ describe('Subscription Creation', () => {
         'set-cookie': ['PHPSESSID=test-session; path=/'],
       },
     });
+    
+    // Setup default mock for getSubscriptions and getHousehold endpoints
+    mockAxiosInstance.get.mockImplementation((url) => {
+      if (url === '/api/subscriptions/get_subscriptions.php') {
+        return Promise.resolve({
+          data: {
+            success: true,
+            subscriptions: [],
+            notes: [],
+          },
+        });
+      }
+      if (url === '/api/household/get_household.php') {
+        return Promise.resolve({
+          data: {
+            success: true,
+            household: [
+              { id: 1, name: 'Main User', email: 'main@example.com', in_use: true },
+            ],
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
 
     client = new WallosClient(mockConfig);
   });

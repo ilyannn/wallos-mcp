@@ -679,38 +679,30 @@ export class WallosClient {
       }
     }
 
-    // Determine payer user ID (always use payer_user_name if provided)
+    // Determine payer user ID - use existing or default to main user
     let payerUserId: number | undefined;
     if (data.payer_user_name) {
-      // First try to find existing household member
+      // Try to find existing household member
       const foundMemberId = await this.findHouseholdMemberByName(data.payer_user_name);
-
+      
       if (foundMemberId) {
         payerUserId = foundMemberId;
       } else {
-        // If not found, create it
-        const memberResult = await this.addHouseholdMember(
-          data.payer_user_name,
-          data.payer_user_email,
-        );
-        if (
-          ('success' in memberResult && memberResult.success) ||
-          ('status' in memberResult && memberResult.status === 'Success')
-        ) {
-          if ('household_member_id' in memberResult && memberResult.household_member_id) {
-            payerUserId = memberResult.household_member_id;
-          }
-        } else {
-          const errorMsg =
-            ('errorMessage' in memberResult && memberResult.errorMessage) ||
-            ('message' in memberResult && memberResult.message) ||
-            'Unknown error';
-          throw new Error(`Failed to create household member: ${errorMsg}`);
+        // If not found, use the main user (first household member)
+        const householdResponse = await this.getHousehold();
+        if (householdResponse.success && householdResponse.household.length > 0) {
+          payerUserId = householdResponse.household[0].id;
         }
       }
     } else if (data.payer_user_id) {
-      // Only use payer_user_id if payer_user_name not provided
+      // Use provided payer_user_id
       payerUserId = data.payer_user_id;
+    } else {
+      // Default to main user (first household member)
+      const householdResponse = await this.getHousehold();
+      if (householdResponse.success && householdResponse.household.length > 0) {
+        payerUserId = householdResponse.household[0].id;
+      }
     }
 
     // Parse billing period and frequency
@@ -812,6 +804,22 @@ export class WallosClient {
       },
     });
 
+    // After successful creation, fetch the full subscription data
+    // We need to get all subscriptions and find the one we just created
+    const subscriptionsResponse = await this.getSubscriptions();
+    if (subscriptionsResponse.success && subscriptionsResponse.subscriptions.length > 0) {
+      // Find the subscription we just created (should be the most recent one with our name)
+      const newSubscription = subscriptionsResponse.subscriptions.find(
+        (sub) => sub.name === data.name,
+      );
+      if (newSubscription) {
+        return {
+          ...response.data,
+          subscription: newSubscription,
+        };
+      }
+    }
+
     return response.data;
   }
 
@@ -841,5 +849,176 @@ export class WallosClient {
       return paymentMethod ? paymentMethod.id : null;
     }
     return null;
+  }
+
+  /**
+   * Edit an existing subscription
+   */
+  async editSubscription(
+    id: number,
+    data: Partial<CreateSubscriptionData>,
+  ): Promise<SubscriptionMutationResponse> {
+    await this.ensureSession();
+
+    // Handle currency conversion
+    let currencyId: number | undefined;
+    if (data.currency_code) {
+      const foundCurrencyId = await this.findCurrencyByCode(data.currency_code);
+      if (foundCurrencyId) {
+        currencyId = foundCurrencyId;
+      } else {
+        // Create if doesn't exist
+        const currencyResult = await this.addCurrency(data.currency_code);
+        if (
+          ('success' in currencyResult && currencyResult.success) ||
+          ('status' in currencyResult && currencyResult.status === 'Success')
+        ) {
+          if ('currency_id' in currencyResult && currencyResult.currency_id) {
+            currencyId = currencyResult.currency_id;
+          }
+        } else {
+          const errorMsg =
+            ('errorMessage' in currencyResult && currencyResult.errorMessage) ||
+            ('message' in currencyResult && currencyResult.message) ||
+            'Unknown error';
+          throw new Error(`Failed to create currency: ${errorMsg}`);
+        }
+      }
+    } else if (data.currency_id) {
+      currencyId = data.currency_id;
+    }
+
+    // Handle category
+    let categoryId: number | undefined;
+    if (data.category_name) {
+      const foundCategoryId = await this.findCategoryByName(data.category_name);
+      if (foundCategoryId) {
+        categoryId = foundCategoryId;
+      } else {
+        // Create if doesn't exist
+        const categoryResult = await this.addCategory(data.category_name);
+        if (
+          ('success' in categoryResult && categoryResult.success) ||
+          ('status' in categoryResult && categoryResult.status === 'Success')
+        ) {
+          if ('categoryId' in categoryResult && categoryResult.categoryId) {
+            categoryId = categoryResult.categoryId;
+          }
+        }
+      }
+    } else if (data.category_id) {
+      categoryId = data.category_id;
+    }
+
+    // Handle payment method
+    let paymentMethodId: number | undefined;
+    if (data.payment_method_name) {
+      const foundPaymentMethodId = await this.findPaymentMethodByName(data.payment_method_name);
+      if (foundPaymentMethodId) {
+        paymentMethodId = foundPaymentMethodId;
+      } else {
+        // Create if doesn't exist
+        const paymentResult = await this.addPaymentMethod(data.payment_method_name);
+        if (
+          ('success' in paymentResult && paymentResult.success) ||
+          ('status' in paymentResult && paymentResult.status === 'Success')
+        ) {
+          if ('payment_method_id' in paymentResult && paymentResult.payment_method_id) {
+            paymentMethodId = paymentResult.payment_method_id;
+          }
+        }
+      }
+    } else if (data.payment_method_id) {
+      paymentMethodId = data.payment_method_id;
+    }
+
+    // Handle payer - use existing or default to main user
+    let payerUserId: number | undefined;
+    if (data.payer_user_name) {
+      const foundMemberId = await this.findHouseholdMemberByName(data.payer_user_name);
+      if (foundMemberId) {
+        payerUserId = foundMemberId;
+      } else {
+        // Use main user
+        const householdResponse = await this.getHousehold();
+        if (householdResponse.success && householdResponse.household.length > 0) {
+          payerUserId = householdResponse.household[0].id;
+        }
+      }
+    } else if (data.payer_user_id) {
+      payerUserId = data.payer_user_id;
+    }
+
+    // Prepare form data for POST request - only include fields that are provided
+    const formData = new URLSearchParams();
+    formData.append('id', id.toString());
+
+    if (data.name !== undefined) {
+      formData.append('name', data.name);
+    }
+    if (data.price !== undefined) {
+      formData.append('price', data.price.toString());
+    }
+    if (currencyId !== undefined) {
+      formData.append('currency_id', currencyId.toString());
+    }
+    if (data.billing_period !== undefined || data.billing_frequency !== undefined) {
+      const { cycle, frequency } = this.parseBillingPeriod(
+        data.billing_period,
+        data.billing_frequency,
+      );
+      formData.append('cycle', cycle.toString());
+      formData.append('frequency', frequency.toString());
+    }
+    if (categoryId !== undefined) {
+      formData.append('category_id', categoryId.toString());
+    }
+    if (paymentMethodId !== undefined) {
+      formData.append('payment_method_id', paymentMethodId.toString());
+    }
+    if (payerUserId !== undefined) {
+      formData.append('payer_user_id', payerUserId.toString());
+    }
+    if (data.start_date !== undefined) {
+      formData.append('start_date', data.start_date);
+    }
+    if (data.next_payment !== undefined) {
+      formData.append('next_payment', data.next_payment);
+    }
+    if (data.auto_renew !== undefined) {
+      formData.append('auto_renew', data.auto_renew ? '1' : '0');
+    }
+    if (data.notes !== undefined) {
+      formData.append('notes', data.notes);
+    }
+    if (data.url !== undefined) {
+      formData.append('url', data.url);
+    }
+    if (data.notify !== undefined) {
+      formData.append('notifications', data.notify ? '1' : '0');
+    }
+    if (data.notify_days_before !== undefined) {
+      formData.append('notify_days_before', data.notify_days_before.toString());
+    }
+
+    const response = await this.client.post('/endpoints/subscription/edit.php', formData, {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    });
+
+    // After successful edit, fetch the full subscription data
+    const subscriptionsResponse = await this.getSubscriptions();
+    if (subscriptionsResponse.success && subscriptionsResponse.subscriptions.length > 0) {
+      const updatedSubscription = subscriptionsResponse.subscriptions.find((sub) => sub.id === id);
+      if (updatedSubscription) {
+        return {
+          ...response.data,
+          subscription: updatedSubscription,
+        };
+      }
+    }
+
+    return response.data;
   }
 }

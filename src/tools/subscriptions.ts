@@ -1,6 +1,6 @@
 import { Tool } from '@modelcontextprotocol/sdk/types.js';
 import { WallosClient } from '../wallos-client.js';
-import { SubscriptionFilters, CreateSubscriptionData } from '../types/index.js';
+import { SubscriptionFilters, CreateSubscriptionData, EditSubscriptionData } from '../types/index.js';
 
 export const listSubscriptionsTool: Tool = {
   name: 'list_subscriptions',
@@ -212,12 +212,7 @@ export const createSubscriptionTool: Tool = {
       payer_user_name: {
         type: 'string',
         description:
-          "Name of the household member who pays (will create if doesn't exist). Takes priority over payer_user_id",
-      },
-      payer_user_email: {
-        type: 'string',
-        description:
-          'Email for new household member (optional, used only when creating new member)',
+          'Name of the household member who pays. If not found, uses the main user. Takes priority over payer_user_id',
       },
       payer_user_id: {
         type: 'number',
@@ -284,79 +279,45 @@ export async function handleCreateSubscription(
 
     // Add message if available
     if ('message' in response && response.message) {
-      result += `**Message:** ${response.message}\n`;
+      result += `**Message:** ${response.message}\n\n`;
     }
 
-    result += `**Name:** ${args.name}\n`;
-    result += `**Price:** ${args.price}`;
+    // If we have the full subscription data, display it
+    if ('subscription' in response && response.subscription) {
+      const sub = response.subscription;
+      const status = sub.inactive === 0 ? '🟢 Active' : '🔴 Inactive';
+      const autoRenew = sub.auto_renew === 1 ? '✅' : '❌';
+      const notify = sub.notify === 1 ? '🔔' : '🔕';
 
-    if (args.currency_code) {
-      result += ` ${args.currency_code}`;
-    } else if (args.currency_id) {
-      result += ` (Currency ID: ${args.currency_id})`;
-    }
-    result += '\n';
+      result += `**${sub.name}** (ID: ${sub.id})\n`;
+      result += `  Status: ${status}\n`;
+      result += `  Price: ${sub.price} (Currency ID: ${sub.currency_id})\n`;
+      result += `  Next Payment: ${sub.next_payment}\n`;
+      result += `  Category: ${sub.category_name}\n`;
+      result += `  Payment Method: ${sub.payment_method_name}\n`;
+      result += `  Payer: ${sub.payer_user_name}\n`;
+      result += `  Auto-Renew: ${autoRenew}  Notifications: ${notify}\n`;
 
-    if (args.billing_period) {
-      result += `**Billing:** ${args.billing_period}`;
-      if (args.billing_frequency && args.billing_frequency > 1) {
-        result += ` (frequency: ${args.billing_frequency})`;
+      if (sub.url) {
+        result += `  URL: ${sub.url}\n`;
+      }
+      if (sub.notes) {
+        result += `  Notes: ${sub.notes}\n`;
+      }
+    } else {
+      // Fallback to displaying input data if subscription data not available
+      result += `**Name:** ${args.name}\n`;
+      result += `**Price:** ${args.price}`;
+      if (args.currency_code) {
+        result += ` ${args.currency_code}`;
+      } else if (args.currency_id) {
+        result += ` (Currency ID: ${args.currency_id})`;
       }
       result += '\n';
-    }
-
-    if (args.category_name) {
-      result += `**Category:** ${args.category_name}\n`;
-    } else if (args.category_id) {
-      result += `**Category ID:** ${args.category_id}\n`;
-    }
-
-    if (args.payment_method_name) {
-      result += `**Payment Method:** ${args.payment_method_name}\n`;
-    } else if (args.payment_method_id) {
-      result += `**Payment Method ID:** ${args.payment_method_id}\n`;
-    }
-
-    if (args.payer_user_name) {
-      result += `**Payer:** ${args.payer_user_name}`;
-      if (args.payer_user_email) {
-        result += ` (${args.payer_user_email})`;
-      }
-      result += '\n';
-    } else if (args.payer_user_id) {
-      result += `**Payer ID:** ${args.payer_user_id}\n`;
-    }
-
-    if (args.start_date) {
-      result += `**Start Date:** ${args.start_date}\n`;
-    }
-
-    if (args.next_payment) {
-      result += `**Next Payment:** ${args.next_payment}\n`;
-    }
-
-    if (args.auto_renew !== undefined) {
-      result += `**Auto-Renew:** ${args.auto_renew ? '✅ Yes' : '❌ No'}\n`;
-    }
-
-    if (args.notify !== undefined) {
-      result += `**Notifications:** ${args.notify ? '🔔 Enabled' : '🔕 Disabled'}`;
-      if (args.notify && args.notify_days_before) {
-        result += ` (${args.notify_days_before} days before)`;
-      }
-      result += '\n';
-    }
-
-    if (args.url) {
-      result += `**URL:** ${args.url}\n`;
-    }
-
-    if (args.notes) {
-      result += `**Notes:** ${args.notes}\n`;
     }
 
     result +=
-      "\n💡 **Tip:** Any categories, payment methods, currencies, or household members were automatically created if they didn't exist.";
+      "\n💡 **Tip:** Any categories, payment methods, or currencies were automatically created if they didn't exist. Non-existent payers default to the main user.";
 
     return result;
   } catch (error) {
@@ -364,5 +325,169 @@ export async function handleCreateSubscription(
       return `❌ Error creating subscription: ${error.message}`;
     }
     return '❌ Error creating subscription: Unknown error occurred';
+  }
+}
+
+export const editSubscriptionTool: Tool = {
+  name: 'edit_subscription',
+  description:
+    'Edit an existing subscription. Only provide the fields you want to change - all fields are optional.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      id: {
+        type: 'number',
+        description: 'The ID of the subscription to edit',
+      },
+      name: {
+        type: 'string',
+        description: 'New subscription name',
+      },
+      price: {
+        type: 'number',
+        description: 'New price amount',
+      },
+      currency_code: {
+        type: 'string',
+        description: 'New 3-letter currency code (e.g., USD, EUR)',
+      },
+      currency_id: {
+        type: 'number',
+        description: 'New currency ID',
+      },
+      billing_period: {
+        type: 'string',
+        enum: ['monthly', 'yearly', 'weekly', 'daily'],
+        description: 'New billing period',
+      },
+      billing_frequency: {
+        type: 'number',
+        description: 'New billing frequency',
+      },
+      category_name: {
+        type: 'string',
+        description: 'New category name',
+      },
+      category_id: {
+        type: 'number',
+        description: 'New category ID',
+      },
+      payment_method_name: {
+        type: 'string',
+        description: 'New payment method name',
+      },
+      payment_method_id: {
+        type: 'number',
+        description: 'New payment method ID',
+      },
+      payer_user_name: {
+        type: 'string',
+        description: 'New payer name (must exist, or uses main user)',
+      },
+      payer_user_id: {
+        type: 'number',
+        description: 'New payer user ID',
+      },
+      start_date: {
+        type: 'string',
+        description: 'New start date in YYYY-MM-DD format',
+      },
+      next_payment: {
+        type: 'string',
+        description: 'New next payment date in YYYY-MM-DD format',
+      },
+      auto_renew: {
+        type: 'boolean',
+        description: 'Whether the subscription auto-renews',
+      },
+      notes: {
+        type: 'string',
+        description: 'New notes',
+      },
+      url: {
+        type: 'string',
+        description: 'New URL',
+      },
+      notify: {
+        type: 'boolean',
+        description: 'Whether to send renewal notifications',
+      },
+      notify_days_before: {
+        type: 'number',
+        description: 'Days before renewal to send notification',
+      },
+    },
+    required: ['id'],
+    additionalProperties: false,
+  },
+};
+
+export async function handleEditSubscription(
+  client: WallosClient,
+  args: { id: number } & EditSubscriptionData,
+): Promise<string> {
+  try {
+    const { id, ...updateData } = args;
+    const response = await client.editSubscription(id, updateData);
+
+    // Handle both old and new response formats
+    if ('status' in response) {
+      if (response.status !== 'Success') {
+        throw new Error(`Failed to edit subscription: ${response.message || 'Unknown error'}`);
+      }
+    } else if ('success' in response) {
+      if (!response.success) {
+        throw new Error(
+          `Failed to edit subscription: ${response.errorMessage || 'Unknown error'}`,
+        );
+      }
+    } else {
+      throw new Error('Invalid response format from subscription edit');
+    }
+
+    let result = `✅ Successfully edited subscription!\n\n`;
+
+    // Add message if available
+    if ('message' in response && response.message) {
+      result += `**Message:** ${response.message}\n\n`;
+    }
+
+    // If we have the full subscription data, display it
+    if ('subscription' in response && response.subscription) {
+      const sub = response.subscription;
+      const status = sub.inactive === 0 ? '🟢 Active' : '🔴 Inactive';
+      const autoRenew = sub.auto_renew === 1 ? '✅' : '❌';
+      const notify = sub.notify === 1 ? '🔔' : '🔕';
+
+      result += `**${sub.name}** (ID: ${sub.id})\n`;
+      result += `  Status: ${status}\n`;
+      result += `  Price: ${sub.price} (Currency ID: ${sub.currency_id})\n`;
+      result += `  Next Payment: ${sub.next_payment}\n`;
+      result += `  Category: ${sub.category_name}\n`;
+      result += `  Payment Method: ${sub.payment_method_name}\n`;
+      result += `  Payer: ${sub.payer_user_name}\n`;
+      result += `  Auto-Renew: ${autoRenew}  Notifications: ${notify}\n`;
+
+      if (sub.url) {
+        result += `  URL: ${sub.url}\n`;
+      }
+      if (sub.notes) {
+        result += `  Notes: ${sub.notes}\n`;
+      }
+    } else {
+      // Fallback to displaying what was changed
+      result += `**Subscription ID:** ${id}\n`;
+      result += `**Changes made:**\n`;
+      Object.entries(updateData).forEach(([key, value]) => {
+        result += `  - ${key}: ${value}\n`;
+      });
+    }
+
+    return result;
+  } catch (error) {
+    if (error instanceof Error) {
+      return `❌ Error editing subscription: ${error.message}`;
+    }
+    return '❌ Error editing subscription: Unknown error occurred';
   }
 }
