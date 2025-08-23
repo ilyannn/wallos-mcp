@@ -89,7 +89,7 @@ jobs:
         run: |
           echo "🧪 Running E2E tests..."
           echo "================================"
-          
+
           # Run tests with detailed output and capture results
           TEST_FILTER="${{ inputs.test_filter }}"
           if [ -n "$TEST_FILTER" ]; then
@@ -98,14 +98,14 @@ jobs:
           else
             OUTPUT=$(bun test tests/e2e/direct-mcp.test.ts 2>&1) || TEST_EXIT_CODE=$?
           fi
-          
+
           echo "$OUTPUT"
-          
+
           # Parse test results
           PASSED=$(echo "$OUTPUT" | grep -oE '[0-9]+ pass' | grep -oE '[0-9]+' || echo "0")
           FAILED=$(echo "$OUTPUT" | grep -oE '[0-9]+ fail' | grep -oE '[0-9]+' || echo "0")
           SKIPPED=$(echo "$OUTPUT" | grep -oE '[0-9]+ skip' | grep -oE '[0-9]+' || echo "0")
-          
+
           echo ""
           echo "📊 Test Results Summary:"
           echo "================================"
@@ -113,7 +113,7 @@ jobs:
           echo "  ❌ Failed: $FAILED"
           echo "  ⏭️  Skipped: $SKIPPED"
           echo "================================"
-          
+
           # Check for skipped tests and fail if found
           if [ "$SKIPPED" -gt 0 ]; then
             echo ""
@@ -121,21 +121,21 @@ jobs:
             echo "❌ E2E tests cannot be skipped - they must either pass or fail explicitly"
             exit 1
           fi
-          
+
           # Check for test failures
           if [ "$FAILED" -gt 0 ] || [ "${TEST_EXIT_CODE:-0}" -ne 0 ]; then
             echo ""
             echo "::error::$FAILED test(s) failed. See output above for details."
             exit 1
           fi
-          
+
           # Success case
           if [ "$PASSED" -eq 0 ]; then
             echo ""
             echo "::warning::No tests were executed. Check test file and configuration."
             exit 1
           fi
-          
+
           echo ""
           echo "✅ All E2E tests passed successfully!"
 
@@ -144,19 +144,19 @@ jobs:
         run: |
           echo "📦 Collecting test artifacts..."
           mkdir -p test-artifacts
-          
+
           # Capture container logs
           docker compose -f tests/e2e/docker-compose.test.yml logs > test-artifacts/docker-logs.txt 2>&1 || true
-          
+
           # Capture container status
           docker compose -f tests/e2e/docker-compose.test.yml ps > test-artifacts/docker-status.txt 2>&1 || true
-          
+
           # If debug mode, capture more detailed info
           if [ "${{ inputs.debug_enabled }}" = "true" ]; then
             docker inspect wallos-e2e-test > test-artifacts/container-inspect.json 2>&1 || true
             curl -s "http://localhost:18282/api/v1/info" > test-artifacts/wallos-api-info.json 2>&1 || true
           fi
-          
+
           echo "📄 Artifacts collected in test-artifacts/"
 
       - name: Upload test results
@@ -206,7 +206,7 @@ jobs:
           echo "**Debug mode:** ${{ inputs.debug_enabled && 'Enabled' || 'Disabled' }}" >> $GITHUB_STEP_SUMMARY
           echo "**Test filter:** ${{ inputs.test_filter || 'None (all tests)' }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
+
           if [ "${{ job.status }}" = "success" ]; then
             echo "### ✅ Status: SUCCESS" >> $GITHUB_STEP_SUMMARY
           else
