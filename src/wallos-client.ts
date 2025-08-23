@@ -91,6 +91,9 @@ export class WallosClient {
    */
   async getCategories(): Promise<CategoriesResponse> {
     const response = await this.client.get('/api/categories/get_categories.php');
+    if (!response || !response.data) {
+      throw new Error('Invalid response from categories API');
+    }
     return response.data;
   }
 
@@ -99,6 +102,9 @@ export class WallosClient {
    */
   async getCurrencies(): Promise<CurrenciesResponse> {
     const response = await this.client.get('/api/currencies/get_currencies.php');
+    if (!response || !response.data) {
+      throw new Error('Invalid response from currencies API');
+    }
     return response.data;
   }
 
@@ -107,6 +113,9 @@ export class WallosClient {
    */
   async getPaymentMethods(): Promise<PaymentMethodsResponse> {
     const response = await this.client.get('/api/payment_methods/get_payment_methods.php');
+    if (!response || !response.data) {
+      throw new Error('Invalid response from payment methods API');
+    }
     return response.data;
   }
 
@@ -115,6 +124,9 @@ export class WallosClient {
    */
   async getHousehold(): Promise<HouseholdResponse> {
     const response = await this.client.get('/api/household/get_household.php');
+    if (!response || !response.data) {
+      throw new Error('Invalid response from household API');
+    }
     return response.data;
   }
 
@@ -137,6 +149,9 @@ export class WallosClient {
     }
 
     const response = await this.client.get('/api/subscriptions/get_subscriptions.php', { params });
+    if (!response || !response.data) {
+      throw new Error('Invalid response from subscriptions API');
+    }
     return response.data;
   }
 
@@ -153,18 +168,20 @@ export class WallosClient {
         this.getHousehold(),
       ]);
 
-      // Check if all requests were successful
-      if (!categoriesRes.success) {
-        throw new Error(`Categories API error: ${categoriesRes.title}`);
+      // Check if all requests were successful and have valid data
+      if (!categoriesRes || !categoriesRes.success || !categoriesRes.categories) {
+        throw new Error(`Categories API error: ${categoriesRes?.title || 'Invalid response'}`);
       }
-      if (!currenciesRes.success) {
-        throw new Error(`Currencies API error: ${currenciesRes.title}`);
+      if (!currenciesRes || !currenciesRes.success || !currenciesRes.currencies) {
+        throw new Error(`Currencies API error: ${currenciesRes?.title || 'Invalid response'}`);
       }
-      if (!paymentMethodsRes.success) {
-        throw new Error(`Payment methods API error: ${paymentMethodsRes.title}`);
+      if (!paymentMethodsRes || !paymentMethodsRes.success || !paymentMethodsRes.payment_methods) {
+        throw new Error(
+          `Payment methods API error: ${paymentMethodsRes?.title || 'Invalid response'}`,
+        );
       }
-      if (!householdRes.success) {
-        throw new Error(`Household API error: ${householdRes.title}`);
+      if (!householdRes || !householdRes.success || !householdRes.household) {
+        throw new Error(`Household API error: ${householdRes?.title || 'Invalid response'}`);
       }
 
       // Aggregate the response
@@ -232,8 +249,8 @@ export class WallosClient {
       // Extract PHPSESSID from Set-Cookie headers
       let sessionCookieValue: string | undefined;
 
-      if (loginResponse.headers['set-cookie']) {
-        const setCookieHeaders = loginResponse.headers['set-cookie'];
+      const setCookieHeaders = loginResponse.headers['set-cookie'];
+      if (setCookieHeaders && Array.isArray(setCookieHeaders)) {
         for (const cookieHeader of setCookieHeaders) {
           if (cookieHeader.startsWith('PHPSESSID=')) {
             // Extract the cookie value (before the first semicolon)
@@ -466,7 +483,7 @@ export class WallosClient {
    */
   async findCurrencyByCode(code: string): Promise<number | null> {
     const currenciesResponse = await this.getCurrencies();
-    if (currenciesResponse.success) {
+    if (currenciesResponse?.success && currenciesResponse.currencies) {
       const currency = currenciesResponse.currencies.find(
         (curr) => curr.code.toUpperCase() === code.toUpperCase(),
       );
@@ -501,7 +518,7 @@ export class WallosClient {
    */
   async findHouseholdMemberByName(name: string): Promise<number | null> {
     const householdResponse = await this.getHousehold();
-    if (householdResponse.success) {
+    if (householdResponse?.success && householdResponse.household) {
       const member = householdResponse.household.find(
         (m) => m.name.toLowerCase() === name.toLowerCase(),
       );
@@ -690,7 +707,11 @@ export class WallosClient {
       } else {
         // If not found, use the main user (first household member)
         const householdResponse = await this.getHousehold();
-        if (householdResponse.success && householdResponse.household.length > 0) {
+        if (
+          householdResponse?.success &&
+          householdResponse.household &&
+          householdResponse.household.length > 0
+        ) {
           payerUserId = householdResponse.household[0].id;
         }
       }
@@ -700,7 +721,11 @@ export class WallosClient {
     } else {
       // Default to main user (first household member)
       const householdResponse = await this.getHousehold();
-      if (householdResponse.success && householdResponse.household.length > 0) {
+      if (
+        householdResponse?.success &&
+        householdResponse.household &&
+        householdResponse.household.length > 0
+      ) {
         payerUserId = householdResponse.household[0].id;
       }
     }
@@ -828,7 +853,7 @@ export class WallosClient {
    */
   async findCategoryByName(name: string): Promise<number | null> {
     const categoriesResponse = await this.getCategories();
-    if (categoriesResponse.success) {
+    if (categoriesResponse?.success && categoriesResponse.categories) {
       const category = categoriesResponse.categories.find(
         (cat) => cat.name.toLowerCase() === name.toLowerCase(),
       );
@@ -842,7 +867,7 @@ export class WallosClient {
    */
   async findPaymentMethodByName(name: string): Promise<number | null> {
     const paymentMethodsResponse = await this.getPaymentMethods();
-    if (paymentMethodsResponse.success) {
+    if (paymentMethodsResponse?.success && paymentMethodsResponse.payment_methods) {
       const paymentMethod = paymentMethodsResponse.payment_methods.find(
         (pm) => pm.name.toLowerCase() === name.toLowerCase(),
       );
@@ -941,7 +966,11 @@ export class WallosClient {
       } else {
         // Use main user
         const householdResponse = await this.getHousehold();
-        if (householdResponse.success && householdResponse.household.length > 0) {
+        if (
+          householdResponse?.success &&
+          householdResponse.household &&
+          householdResponse.household.length > 0
+        ) {
           payerUserId = householdResponse.household[0].id;
         }
       }
