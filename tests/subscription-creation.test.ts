@@ -707,9 +707,25 @@ Renews monthly`,
           billing_period: testCase.input,
         };
         
-        // Clear previous mocks
-        mockAxiosInstance.get.mockClear();
-        mockAxiosInstance.post.mockClear();
+        // Reset all mocks completely for each iteration
+        mockAxiosInstance.get.mockReset();
+        mockAxiosInstance.post.mockReset();
+
+        // Create a fresh client for each test case to avoid session state issues
+        const freshClient = new WallosClient({
+          baseUrl: 'http://localhost:8282',
+          username: 'testuser',
+          password: 'testpass',
+        });
+        
+        // Replace the axios instance
+        (freshClient as any).client = mockAxiosInstance;
+
+        // Authentication
+        mockAxiosInstance.post.mockResolvedValueOnce({
+          status: 302,
+          headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
+        });
 
         // Get main currency
         mockAxiosInstance.get.mockResolvedValueOnce({
@@ -737,7 +753,7 @@ Renews monthly`,
           },
         });
 
-        await client.createSubscription(subscriptionData);
+        await freshClient.createSubscription(subscriptionData);
 
         // Verify the cycle and frequency parameters were set correctly
         const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];

@@ -91,8 +91,12 @@ lint:
   bunx markdownlint-cli '**/*.md' --ignore node_modules --ignore dist
   @echo "ESLint, TypeScript, and Markdown linting complete!"
 
-# Run tests
+# Run tests (skips dev/integration tests by default)
 test:
+  SKIP_DEV_TESTS=true bun test
+
+# Run all tests including integration tests
+test-all:
   bun test
 
 # Run tests with coverage
