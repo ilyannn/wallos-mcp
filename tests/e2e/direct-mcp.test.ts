@@ -20,7 +20,7 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
   let isWallosRunning = false;
 
   beforeAll(async () => {
-    // Check if Wallos is running
+    // Check if Wallos is running (same check as workflow)
     try {
       const response = await fetch(`${WALLOS_URL}/api/health`);
       isWallosRunning = response.ok;

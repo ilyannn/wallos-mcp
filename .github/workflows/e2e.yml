@@ -63,7 +63,7 @@ jobs:
 
           # Wait for Wallos to be healthy (max 60 seconds)
           for i in {1..30}; do
-            if curl -sf "http://localhost:18282/" > /dev/null 2>&1; then
+            if curl -sf "http://localhost:18282/api/health" > /dev/null 2>&1; then
               echo "✅ Wallos is ready!"
               break
             fi
@@ -72,15 +72,22 @@ jobs:
           done
 
           # Verify Wallos is actually responding
-          curl -sf "http://localhost:18282/" || (echo "❌ Wallos failed to start" && docker compose -f tests/e2e/docker-compose.test.yml logs && exit 1)
+          curl -sf "http://localhost:18282/api/health" || (echo "❌ Wallos failed to start" && docker compose -f tests/e2e/docker-compose.test.yml logs && exit 1)
 
       - name: Setup Wallos test user
         run: |
-          echo "Creating test user..."
+          echo "Attempting to create test user..."
           RESPONSE=$(curl -s -X POST "http://localhost:18282/endpoints/user/register.php" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "username=testuser&password=testpass123&email=test@example.com")
+            -d "username=testuser&password=testpass123&email=test@example.com" || echo "Registration endpoint not available")
           echo "User setup response: $RESPONSE"
+          
+          # Also try alternative registration methods or check if user already exists
+          echo "Checking if Wallos has default credentials or setup is needed..."
+          LOGIN_TEST=$(curl -s -X POST "http://localhost:18282/login.php" \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -d "username=testuser&password=testpass123" || echo "Login test failed")
+          echo "Login test response: $LOGIN_TEST"
 
       - name: Run E2E tests
         env:
