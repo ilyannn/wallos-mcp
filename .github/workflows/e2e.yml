@@ -14,6 +14,10 @@ on:
         required: false
         default: ''
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   e2e-tests:
     name: E2E Tests with Wallos
@@ -23,10 +27,10 @@ jobs:
     steps:
       - name: Check for required secrets
         run: |
-          echo "🔍 Checking for required API keys..."
-          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
-            echo "❌ ERROR: ANTHROPIC_API_KEY secret is not configured"
-            echo "::error::ANTHROPIC_API_KEY is required for E2E tests. Please add it to repository secrets."
+          echo "🔍 Checking for required OAuth tokens..."
+          if [ -z "${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}" ]; then
+            echo "❌ ERROR: CLAUDE_CODE_OAUTH_TOKEN secret is not configured"
+            echo "::error::CLAUDE_CODE_OAUTH_TOKEN is required for E2E tests. Please add it to repository secrets."
             exit 1
           fi
           echo "✅ All required secrets are configured"
@@ -84,7 +88,7 @@ jobs:
           WALLOS_URL: http://localhost:18282
           WALLOS_USERNAME: testuser
           WALLOS_PASSWORD: testpass123
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           DEBUG: ${{ inputs.debug_enabled && 'true' || '' }}
         run: |
           echo "🧪 Running E2E tests..."
