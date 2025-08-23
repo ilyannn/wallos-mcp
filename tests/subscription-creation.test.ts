@@ -706,17 +706,10 @@ Renews monthly`,
           price: 10,
           billing_period: testCase.input,
         };
-
-        // Reset mocks
-        mockAxiosInstance.get.mockReset();
-        mockAxiosInstance.post.mockReset();
-        setupDefaultMocks();
-
-        // Setup auth
-        mockAxiosInstance.post.mockResolvedValueOnce({
-          status: 302,
-          headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
-        });
+        
+        // Clear previous mocks
+        mockAxiosInstance.get.mockClear();
+        mockAxiosInstance.post.mockClear();
 
         // Get main currency
         mockAxiosInstance.get.mockResolvedValueOnce({
@@ -726,6 +719,22 @@ Renews monthly`,
         // Create subscription
         mockAxiosInstance.post.mockResolvedValueOnce({
           data: { status: 'Success', message: 'Subscription added successfully' },
+        });
+
+        // Mock getSubscriptions to return the created subscription
+        mockAxiosInstance.get.mockResolvedValueOnce({
+          data: {
+            success: true,
+            subscriptions: [{
+              id: 1,
+              name: `Test ${testCase.input}`,
+              price: 10,
+              currency: 'USD',
+              cycle: testCase.expectedCycle,
+              frequency: testCase.expectedFreq,
+            }],
+            notes: [],
+          },
         });
 
         await client.createSubscription(subscriptionData);
@@ -764,6 +773,22 @@ Renews monthly`,
       // Create subscription
       mockAxiosInstance.post.mockResolvedValueOnce({
         data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Test Unknown',
+            price: 10,
+            currency: 'USD',
+            cycle: 3,
+            frequency: 1,
+          }],
+          notes: [],
+        },
       });
 
       // Mock process.stderr.write
@@ -815,6 +840,22 @@ Renews monthly`,
         data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Test Auto-Renew Default',
+            price: 12.99,
+            currency: 'USD',
+            cycle: 3,
+            frequency: 1,
+          }],
+          notes: [],
+        },
+      });
+
       await client.createSubscription(subscriptionData);
 
       // Verify auto_renew was set to '1' (true) by default
@@ -852,6 +893,22 @@ Renews monthly`,
         data: { status: 'Success', message: 'Subscription added successfully' },
       });
 
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Test Auto-Renew False',
+            price: 9.99,
+            currency: 'USD',
+            cycle: 3,
+            frequency: 1,
+          }],
+          notes: [],
+        },
+      });
+
       await client.createSubscription(subscriptionData);
 
       // Verify auto_renew was set to '0' (false)
@@ -887,6 +944,22 @@ Renews monthly`,
       // Create subscription
       mockAxiosInstance.post.mockResolvedValueOnce({
         data: { status: 'Success', message: 'Subscription added successfully' },
+      });
+
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Test Auto-Renew True',
+            price: 15.99,
+            currency: 'USD',
+            cycle: 3,
+            frequency: 1,
+          }],
+          notes: [],
+        },
       });
 
       await client.createSubscription(subscriptionData);

@@ -111,11 +111,11 @@ export async function handleListSubscriptions(
 
     const response = await client.getSubscriptions(filters);
 
-    if (!response.success) {
-      throw new Error(`API error: ${response.title}`);
+    if (!response || !response.success) {
+      throw new Error(`API error: ${response?.title || 'Unknown error'}`);
     }
 
-    if (response.subscriptions.length === 0) {
+    if (!response.subscriptions || response.subscriptions.length === 0) {
       return 'No subscriptions found matching the specified filters.';
     }
 

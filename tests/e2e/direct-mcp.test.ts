@@ -10,8 +10,8 @@ import { WallosClient } from '../../src/wallos-client.js';
 
 // Test configuration
 const WALLOS_URL = process.env.E2E_WALLOS_URL || 'http://localhost:18282';
-const WALLOS_USERNAME = 'testuser';
-const WALLOS_PASSWORD = 'testpass123';
+const WALLOS_USERNAME = process.env.WALLOS_USERNAME || 'test';
+const WALLOS_PASSWORD = process.env.WALLOS_PASSWORD || 'changeme';
 const MCP_SERVER_PATH = process.env.MCP_SERVER_PATH || 'dist/index.js';
 
 describe('E2E: MCP Server with Real Wallos Instance', () => {

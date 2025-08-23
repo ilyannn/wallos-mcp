@@ -9,7 +9,7 @@ services:
     environment:
       - TZ=UTC
     volumes:
-      - wallos-test-data:/var/www/html/db
+      - ../../dev/wallos.dev.db:/var/www/html/db/wallos.db
     healthcheck:
       test: ['CMD', 'curl', '-f', 'http://localhost/']
       interval: 5s

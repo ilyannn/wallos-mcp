@@ -56,6 +56,12 @@ jobs:
       - name: Build MCP server
         run: bun run build
 
+      - name: Prepare dev database
+        run: |
+          echo "Checking dev database..."
+          ls -la dev/wallos.dev.db
+          echo "Dev database size: $(du -h dev/wallos.dev.db)"
+
       - name: Start Wallos test instance
         run: |
           docker compose -f tests/e2e/docker-compose.test.yml up -d
@@ -74,27 +80,21 @@ jobs:
           # Verify Wallos is actually responding
           curl -sf "http://localhost:18282/" || (echo "❌ Wallos failed to start" && docker compose -f tests/e2e/docker-compose.test.yml logs && exit 1)
 
-      - name: Setup Wallos test user
+      - name: Verify dev database and credentials
         run: |
-          echo "Attempting to create test user..."
-          RESPONSE=$(curl -s -X POST "http://localhost:18282/endpoints/user/register.php" \
-            -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "username=testuser&password=testpass123&email=test@example.com" || echo "Registration endpoint not available")
-          echo "User setup response: $RESPONSE"
-
-          # Also try alternative registration methods or check if user already exists
-          echo "Checking if Wallos has default credentials or setup is needed..."
+          echo "Using existing dev database with pre-configured user"
+          echo "Testing login with dev credentials..."
           LOGIN_TEST=$(curl -s -X POST "http://localhost:18282/login.php" \
             -H "Content-Type: application/x-www-form-urlencoded" \
-            -d "username=testuser&password=testpass123" || echo "Login test failed")
+            -d "username=test&password=changeme" || echo "Login test failed")
           echo "Login test response: $LOGIN_TEST"
 
       - name: Run E2E tests
         env:
           E2E_WALLOS_URL: http://localhost:18282
           WALLOS_URL: http://localhost:18282
-          WALLOS_USERNAME: testuser
-          WALLOS_PASSWORD: testpass123
+          WALLOS_USERNAME: test
+          WALLOS_PASSWORD: changeme
           CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           DEBUG: ${{ inputs.debug_enabled && 'true' || '' }}
         run: |

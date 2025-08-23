@@ -35,13 +35,13 @@ for i in {1..30}; do
     sleep 2
 done
 
-# Setup initial Wallos user
-echo -e "${YELLOW}Setting up Wallos user...${NC}"
-WALLOS_SETUP_RESPONSE=$(curl -s -X POST "${WALLOS_URL}/endpoints/user/register.php" \
+# Verify dev user credentials
+echo -e "${YELLOW}Verifying dev user credentials...${NC}"
+WALLOS_LOGIN_TEST=$(curl -s -X POST "${WALLOS_URL}/login.php" \
     -H "Content-Type: application/x-www-form-urlencoded" \
-    -d "username=testuser&password=testpass123&email=test@example.com")
+    -d "username=test&password=changeme")
 
-echo "Wallos setup response: ${WALLOS_SETUP_RESPONSE}"
+echo "Login test response: ${WALLOS_LOGIN_TEST}"
 
 # Build the MCP server
 echo -e "${YELLOW}Building MCP server...${NC}"
@@ -56,8 +56,8 @@ cat > "${MCP_CONFIG_DIR}/wallos-mcp.json" <<EOF
       "args": ["run", "${PWD}/dist/index.js"],
       "env": {
         "WALLOS_URL": "${WALLOS_URL}",
-        "WALLOS_USERNAME": "testuser",
-        "WALLOS_PASSWORD": "testpass123"
+        "WALLOS_USERNAME": "test",
+        "WALLOS_PASSWORD": "changeme"
       }
     }
   }

@@ -133,6 +133,32 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
         .mockResolvedValueOnce({
           data: { status: 'Success', message: 'Netflix Premium subscription created successfully' },
         });
+      
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Netflix Premium',
+            price: 15.99,
+            currency_id: 1,
+            category_name: 'Entertainment',
+            payment_method_name: 'Credit Card',
+            payer_user_name: 'John Smith (john@family.com)',
+            next_payment: '2024-02-15',
+            inactive: 0,
+            auto_renew: 1,
+            notify: 1,
+            url: 'https://netflix.com',
+            notes: `Netflix Premium family plan
+- 4K streaming
+- 4 simultaneous screens
+- Includes mobile downloads`,
+          }],
+          notes: [],
+        },
+      });
 
       const netflixData: CreateSubscriptionData = {
         name: 'Netflix Premium',
@@ -158,17 +184,17 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
 
       expect(result).toContain('✅ Successfully created subscription!');
       expect(result).toContain('**Message:** Netflix Premium subscription created successfully');
-      expect(result).toContain('**Name:** Netflix Premium');
-      expect(result).toContain('**Price:** 15.99 USD');
-      expect(result).toContain('**Category:** Entertainment');
-      expect(result).toContain('**Payment Method:** Credit Card');
-      expect(result).toContain('**Payer:** John Smith (john@family.com)');
-      expect(result).toContain('**Auto-Renew:** ✅ Yes');
-      expect(result).toContain('**Notifications:** 🔔 Enabled (3 days before)');
+      expect(result).toContain('**Netflix Premium** (ID: 1)');
+      expect(result).toContain('Price: 15.99 (Currency ID: 1)');
+      expect(result).toContain('Category: Entertainment');
+      expect(result).toContain('Payment Method: Credit Card');
+      expect(result).toContain('Payer: John Smith (john@family.com)');
+      expect(result).toContain('Auto-Renew: ✅');
+      expect(result).toContain('Notifications: 🔔');
       expect(result).toContain('automatically created if they didn\'t exist');
 
       // Verify all API calls were made in correct sequence
-      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(8);
+      expect(mockAxiosInstance.get).toHaveBeenCalledTimes(9); // 8 original + 1 getSubscriptions
       expect(mockAxiosInstance.post).toHaveBeenCalledTimes(2); // auth + subscription creation
     });
 
@@ -205,6 +231,15 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
         .mockResolvedValueOnce({
           data: { success: true, payment_method_id: 4 },
         })
+        // Household lookup - return main user
+        .mockResolvedValueOnce({
+          data: { 
+            success: true, 
+            household: [
+              { id: 1, name: 'Main User', email: 'user@example.com', in_use: true }
+            ] 
+          },
+        })
         // Create subscription
       
       // Mock subscription creation with POST
@@ -212,6 +247,29 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
         .mockResolvedValueOnce({
           data: { status: 'Success', message: 'Spotify Premium subscription created successfully' },
         });
+      
+      // Mock getSubscriptions to return the created subscription
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 2,
+            name: 'Spotify Premium',
+            price: 119.88,
+            currency_id: 2,
+            category_name: 'Music',
+            payment_method_name: 'PayPal',
+            payer_user_name: 'Main User',
+            next_payment: '2025-01-01',
+            inactive: 0,
+            auto_renew: 1,
+            notify: 0,
+            url: 'https://spotify.com',
+            notes: 'Annual Spotify Premium subscription',
+          }],
+          notes: [],
+        },
+      });
 
       const spotifyData: CreateSubscriptionData = {
         name: 'Spotify Premium',
@@ -230,11 +288,10 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
 
       expect(result).toContain('✅ Successfully created subscription!');
       expect(result).toContain('**Message:** Spotify Premium subscription created successfully');
-      expect(result).toContain('**Name:** Spotify Premium');
-      expect(result).toContain('**Price:** 119.88 EUR');
-      expect(result).toContain('**Billing:** yearly');
-      expect(result).toContain('**Category:** Music');
-      expect(result).toContain('**Payment Method:** PayPal');
+      expect(result).toContain('**Spotify Premium** (ID: 2)');
+      expect(result).toContain('Price: 119.88 (Currency ID: 2)');
+      expect(result).toContain('Category: Music');
+      expect(result).toContain('Payment Method: PayPal');
     });
 
     test('should handle multiple streaming services with different configurations', async () => {
@@ -272,14 +329,7 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
       for (let i = 0; i < streamingServices.length; i++) {
         const service = streamingServices[i];
         
-        // Mock authentication first for this service
-        mockAxiosInstance.post
-          .mockResolvedValueOnce({
-            status: 302,
-            headers: {
-              'set-cookie': ['PHPSESSID=test-session; path=/'],
-            },
-          });
+        // The client was already created in beforeEach with auth mock, so no need to mock auth again
         
         // Mock responses for each service creation
         if (i === 0) {
@@ -313,12 +363,33 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
           // Mock subscription creation with POST
           mockAxiosInstance.post
             .mockResolvedValueOnce({ data: { status: 'Success', message: 'Subscription created successfully' } });
+          
+          // Mock getSubscriptions to return the created subscription  
+          mockAxiosInstance.get.mockResolvedValueOnce({
+            data: {
+              success: true,
+              subscriptions: [{
+                id: i + 1,
+                name: service.name,
+                price: service.price,
+                currency_id: 1,
+                category_name: service.category_name,
+                payment_method_name: service.payment_method_name,
+                payer_user_name: service.payer_user_name,
+                next_payment: '2024-02-01',
+                inactive: 0,
+                auto_renew: 1,
+                notify: service.notify ? 1 : 0,
+              }],
+              notes: [],
+            },
+          });
         }
 
         const result = await handleCreateSubscription(client, service);
         expect(result).toContain('✅ Successfully created subscription!');
-        expect(result).toContain(`**Name:** ${service.name}`);
-        expect(result).toContain('**Category:** Entertainment');
+        expect(result).toContain(`**${service.name}** (ID: ${i + 1})`);
+        expect(result).toContain('Category: Entertainment');
       }
 
       expect(mockAxiosInstance.get).toHaveBeenCalled();
@@ -343,10 +414,33 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
         .mockResolvedValueOnce({ data: { success: true, categoryId: 2 } })
         .mockResolvedValueOnce({ data: { success: true, payment_methods: [] } })
         .mockResolvedValueOnce({ data: { success: true, payment_method_id: 3 } })
+        // Household lookup
+        .mockResolvedValueOnce({ data: { success: true, household: [{ id: 1, name: 'Main User', email: 'user@example.com', in_use: true }] } })
       
       // Mock subscription creation with POST
       mockAxiosInstance.post
         .mockResolvedValueOnce({ data: { status: 'Success', message: 'Netflix subscription created successfully' } });
+      
+      // Mock getSubscriptions after creation
+      mockAxiosInstance.get.mockResolvedValueOnce({
+        data: {
+          success: true,
+          subscriptions: [{
+            id: 1,
+            name: 'Netflix Premium',
+            price: 15.99,
+            currency_id: 1,
+            category_name: 'Entertainment',
+            payment_method_name: 'Credit Card',
+            payer_user_name: 'Main User',
+            next_payment: '2024-02-01',
+            inactive: 0,
+            auto_renew: 1,
+            notify: 0,
+          }],
+          notes: [],
+        },
+      });
 
       const netflixData: CreateSubscriptionData = {
         name: 'Netflix Premium',
