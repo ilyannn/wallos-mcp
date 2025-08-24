@@ -80,7 +80,7 @@ wallos-dev-reset-with-template:
 fmt:
   bun run format
   @echo "Formatting with Prettier..."
-  bunx markdownlint-cli --fix '**/*.md' --ignore node_modules --ignore dist || echo "No markdown files to fix"
+  bunx markdownlint-cli --fix '**/*.md' --config .github/linters/.markdown-lint.yml --ignore node_modules --ignore dist || echo "No markdown files to fix"
   @echo "All formatting complete!"
 
 _ensure-git-clean:
@@ -95,7 +95,7 @@ lint:
     @echo "Running comprehensive linting..."
     bun run lint
     bun run typecheck
-    bunx markdownlint-cli '**/*.md' --ignore node_modules --ignore dist
+    bunx markdownlint-cli '**/*.md' --config .github/linters/.markdown-lint.yml --ignore node_modules --ignore dist
     @echo "ESLint, TypeScript, and Markdown linting complete!"
 
 # Run tests (skips dev/integration tests by default)
