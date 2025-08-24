@@ -140,31 +140,58 @@ describe('Subscription Creation', () => {
 
   describe('Payment Method Creation', () => {
     test('should create payment method with default name', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
+      // Mock authentication
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        status: 302,
+        headers: {
+          'set-cookie': ['PHPSESSID=test-session; path=/'],
+        },
+      });
+      
+      // Mock payment method creation
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, payment_method_id: 5 },
       });
 
       const result = await client.addPaymentMethod();
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/payments/add.php?action=add'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/payments/add.php',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'multipart/form-data',
+          }),
+        }),
       );
       expect((result as any).success).toBe(true);
       expect((result as any).payment_method_id).toBe(5);
     });
 
     test('should create payment method with custom name', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
+      // Mock authentication
+      mockAxiosInstance.post.mockResolvedValueOnce({
+        status: 302,
+        headers: {
+          'set-cookie': ['PHPSESSID=test-session; path=/'],
+        },
+      });
+      
+      // Mock payment method creation
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, payment_method_id: 6 },
       });
 
       const result = await client.addPaymentMethod('Stripe');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=add'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('name=Stripe'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/payments/add.php',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'multipart/form-data',
+          }),
+        }),
       );
       expect(result.payment_method_id).toBe(6);
     });
@@ -258,7 +285,7 @@ describe('Subscription Creation', () => {
       });
 
       // Mock payment method creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, payment_method_id: 7 },
       });
 
@@ -275,8 +302,14 @@ describe('Subscription Creation', () => {
       );
 
       // Verify payment method creation was called
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/payments/add.php'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/payments/add.php',
+        expect.any(FormData),
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            'Content-Type': 'multipart/form-data',
+          }),
+        }),
       );
 
       // Verify subscription creation was called
@@ -360,7 +393,7 @@ describe('Subscription Creation', () => {
       });
 
       // Mock failed payment method creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: false, errorMessage: 'Payment method creation failed' },
       });
 

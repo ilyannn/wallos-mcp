@@ -762,7 +762,7 @@ describe('Subscription Editing', () => {
       });
 
       // Create payment method
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, payment_method_id: 5 },
       });
 
