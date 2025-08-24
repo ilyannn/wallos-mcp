@@ -84,9 +84,10 @@ fmt:
   @echo "All formatting complete!"
 
 _ensure-git-clean:
-  @if [ -n "$$(git status --porcelain)" ]; then \
-    echo "Error: Working directory is not clean. Please commit or stash changes."; \
-    exit 1; \
+  #!/usr/bin/env bash
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "Error: Working directory is not clean. Please commit or stash changes."
+    exit 1
   fi
 
 # Comprehensive linting with all available linters
