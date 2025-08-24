@@ -64,62 +64,139 @@ jobs:
 
       - name: Start Wallos test instance
         run: |
-          docker compose -f tests/e2e/docker-compose.test.yml up -d
-          echo "Waiting for Wallos to be ready..."
+          echo "🚀 Starting Wallos test instance..."
+          echo "Using configuration: tests/e2e/docker-compose.test.yml"
+          
+          # Show what we're starting with
+          echo "📋 Docker Compose Configuration:"
+          cat tests/e2e/docker-compose.test.yml
+          echo ""
+          
+          # Check for existing containers that might conflict
+          echo "🔍 Checking for existing containers on port 18282..."
+          docker ps --filter "publish=18282" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" || true
+          echo ""
+          
+          # Start containers with detailed output
+          echo "▶️ Starting containers..."
+          docker compose -f tests/e2e/docker-compose.test.yml up -d --remove-orphans
+          
+          echo "⏳ Waiting for containers to initialize..."
+          sleep 5
 
           # Wait for container to be running first
-          for i in {1..10}; do
-            if docker compose -f tests/e2e/docker-compose.test.yml ps --status running | grep -q wallos-e2e-test; then
+          echo "🔍 Waiting for container to be in running state..."
+          for i in {1..20}; do
+            CONTAINER_STATUS=$(docker compose -f tests/e2e/docker-compose.test.yml ps --format json | jq -r '.[0].State // "unknown"' 2>/dev/null || echo "unknown")
+            HEALTH_STATUS=$(docker compose -f tests/e2e/docker-compose.test.yml ps --format json | jq -r '.[0].Health // "none"' 2>/dev/null || echo "none")
+            echo "📊 Container state: $CONTAINER_STATUS, health: $HEALTH_STATUS (attempt $i/20)"
+            
+            if [ "$CONTAINER_STATUS" = "running" ]; then
               echo "✅ Container is running"
-              break
+              if [ "$HEALTH_STATUS" = "healthy" ]; then
+                echo "✅ Container is healthy"
+                break
+              else
+                echo "⏳ Container running but not yet healthy, continuing to wait..."
+              fi
+            elif [ "$CONTAINER_STATUS" = "exited" ]; then
+              echo "❌ Container exited unexpectedly!"
+              echo "=== Container Logs ==="
+              docker compose -f tests/e2e/docker-compose.test.yml logs
+              exit 1
             fi
-            echo "⏳ Waiting for container to start... ($i/10)"
-            sleep 2
+            
+            sleep 3
           done
 
-          # Show container status for debugging
-          echo "📊 Container status:"
+          # Show detailed container info
+          echo "📊 Detailed container status:"
           docker compose -f tests/e2e/docker-compose.test.yml ps
+          echo ""
+          echo "🔍 Container inspection:"
+          docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test ls -la /var/www/html/ || echo "Could not list container contents"
+          echo ""
+          
+          # Check if database file exists and is accessible
+          echo "💾 Checking database file in container:"
+          docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test ls -la /var/www/html/db/ || echo "Could not access database directory"
+          docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test stat /var/www/html/db/wallos.db || echo "Database file not found or not accessible"
+          echo ""
 
-          # Wait for Wallos to be healthy (max 120 seconds with more detailed feedback)
+          # Wait for Wallos HTTP service (max 120 seconds with more detailed feedback)
+          echo "🌐 Waiting for Wallos HTTP service to respond..."
+          HTTP_READY=false
           for i in {1..60}; do
-            if curl -sf -m 5 "http://localhost:18282/" > /dev/null 2>&1; then
-              echo "✅ Wallos is ready and responding!"
+            # Try multiple HTTP checks
+            HTTP_CODE=$(curl -s -w "%{http_code}" -o /dev/null -m 5 "http://localhost:18282/" 2>/dev/null || echo "000")
+            
+            if [ "$HTTP_CODE" != "000" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 500 ]; then
+              echo "✅ Wallos HTTP service is responding! (HTTP $HTTP_CODE)"
+              HTTP_READY=true
+              
               # Test the actual login endpoint too
+              echo "🔐 Testing login endpoint..."
               LOGIN_STATUS=$(curl -s -w "%{http_code}" -o /dev/null -X POST "http://localhost:18282/login.php" \
                 -H "Content-Type: application/x-www-form-urlencoded" \
-                -d "username=test&password=changeme" || echo "000")
+                -d "username=test&password=changeme" 2>/dev/null || echo "000")
               echo "🔐 Login endpoint status: $LOGIN_STATUS"
+              
+              # Also test a simple GET to index
+              INDEX_STATUS=$(curl -s -w "%{http_code}" -o /tmp/index_response.html -m 5 "http://localhost:18282/index.php" 2>/dev/null || echo "000")
+              echo "📄 Index page status: $INDEX_STATUS"
+              
+              if [ -f /tmp/index_response.html ]; then
+                echo "📄 Index response preview:"
+                head -5 /tmp/index_response.html | sed 's/^/  /'
+              fi
+              
               break
             fi
             
-            # Show more details every 10 attempts
-            if [ $((i % 10)) -eq 0 ]; then
-              echo "🔍 Debug info at attempt $i/60:"
-              docker compose -f tests/e2e/docker-compose.test.yml logs --tail=5 wallos-test 2>&1 || true
+            # Show more details every 10 attempts or if we get an error response
+            if [ $((i % 10)) -eq 0 ] || [ "$HTTP_CODE" -ge 400 ]; then
+              echo "🔍 Debug info at attempt $i/60 (HTTP: $HTTP_CODE):"
+              echo "  - Port check: $(netstat -tln | grep :18282 || echo 'Port not listening')"
+              echo "  - Container logs (last 10 lines):"
+              docker compose -f tests/e2e/docker-compose.test.yml logs --tail=10 wallos-test 2>&1 | sed 's/^/    /'
+              echo ""
             else
-              echo "⏳ Waiting for Wallos HTTP response... ($i/60)"
+              echo "⏳ Waiting for HTTP response... ($i/60, last response: $HTTP_CODE)"
             fi
             sleep 2
           done
 
-          # Final verification with detailed error info
-          if ! curl -sf -m 10 "http://localhost:18282/" > /dev/null 2>&1; then
-            echo "❌ Wallos failed to start properly after 2 minutes"
+          # Final verification with comprehensive diagnostics
+          if [ "$HTTP_READY" != "true" ]; then
             echo ""
-            echo "=== Container Logs ==="
-            docker compose -f tests/e2e/docker-compose.test.yml logs wallos-test
+            echo "❌ Wallos HTTP service failed to start properly after 2 minutes"
             echo ""
-            echo "=== Container Status ==="
+            echo "=== COMPREHENSIVE DIAGNOSTICS ==="
+            echo ""
+            echo "📊 Final Container Status:"
             docker compose -f tests/e2e/docker-compose.test.yml ps
             echo ""
-            echo "=== Network Status ==="
-            docker network ls
+            echo "📋 Container Logs (last 50 lines):"
+            docker compose -f tests/e2e/docker-compose.test.yml logs --tail=50
             echo ""
-            echo "=== Port Status ==="
-            netstat -tln | grep 18282 || echo "Port 18282 not listening"
+            echo "🌐 Network Diagnostics:"
+            echo "  - Docker networks:"
+            docker network ls
+            echo "  - Port listeners:"
+            netstat -tln | grep -E "(18282|80|443)" || echo "    No relevant ports listening"
+            echo "  - Container IP and ports:"
+            docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test hostname -I 2>/dev/null || echo "    Could not get container IP"
+            echo ""
+            echo "🔍 Container Filesystem Check:"
+            docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test find /var/www/html -name "*.php" -type f | head -10 || echo "    Could not list PHP files"
+            echo ""
+            echo "⚙️ Container Process Check:"
+            docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test ps aux || echo "    Could not list processes"
+            echo ""
             exit 1
           fi
+          
+          echo "🎉 Wallos test instance is fully ready!"
 
       - name: Verify dev database and credentials
         run: |

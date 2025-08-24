@@ -22,21 +22,41 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
   beforeAll(async () => {
     // Check if Wallos is running (same check as workflow)
     console.log(`🔍 Checking Wallos availability at ${WALLOS_URL}...`);
+    console.log(`📋 Test configuration:`);
+    console.log(`   - WALLOS_URL: ${WALLOS_URL}`);
+    console.log(`   - USERNAME: ${WALLOS_USERNAME}`);
+    console.log(`   - PASSWORD: ${WALLOS_PASSWORD ? '[SET]' : '[NOT SET]'}`);
+    console.log(`   - MCP_SERVER_PATH: ${MCP_SERVER_PATH}`);
+    console.log(`   - NODE_ENV: ${process.env.NODE_ENV || '[not set]'}`);
+    console.log('');
     
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
       
+      console.log(`🌐 Attempting HTTP connection to ${WALLOS_URL}/...`);
       const response = await fetch(`${WALLOS_URL}/`, { 
         signal: controller.signal,
         headers: { 'User-Agent': 'E2E-Test-Health-Check' }
       });
       clearTimeout(timeoutId);
       
+      console.log(`📊 HTTP Response: ${response.status} ${response.statusText}`);
+      
       isWallosRunning = response.ok;
       
       if (isWallosRunning) {
         console.log('✅ Wallos instance is running and responsive');
+        
+        // Try to get some response content for debugging
+        const contentType = response.headers.get('content-type');
+        console.log(`📄 Content-Type: ${contentType}`);
+        
+        if (contentType?.includes('text/html')) {
+          const text = await response.text();
+          const preview = text.substring(0, 200).replace(/\s+/g, ' ');
+          console.log(`📄 Response preview: ${preview}...`);
+        }
         
         // Test login endpoint as well
         try {
@@ -60,11 +80,20 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
       console.warn(`   Error: ${error instanceof Error ? error.message : String(error)}`);
       console.warn('   Run: ./tests/e2e/setup-test-env.sh to start Wallos');
       console.warn(`   Expected URL: ${WALLOS_URL}`);
+      console.warn('');
+      console.warn('🔧 Troubleshooting steps:');
+      console.warn('   1. Check if Wallos container is running: docker ps');
+      console.warn('   2. Check port 18282 is available: netstat -tln | grep 18282');
+      console.warn('   3. Check Docker Compose logs: docker compose -f tests/e2e/docker-compose.test.yml logs');
+      console.warn('   4. Try manual curl test: curl -v http://localhost:18282/');
+      console.warn('');
       return;
     }
 
     if (!isWallosRunning) {
       console.warn('❌ Wallos is not accessible - all E2E tests will be skipped');
+      console.warn('📊 Response details available above for debugging');
+      console.warn('');
       return;
     }
 
