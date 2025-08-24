@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   wallos-test:
-    image: bellamy/wallos:latest
+    image: wallos:latest
     container_name: wallos-e2e-test
     ports:
       - '18282:80'
