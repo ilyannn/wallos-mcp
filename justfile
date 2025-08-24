@@ -1,7 +1,7 @@
 #!/usr/bin/env just --justfile
 
 # Default recipe to display help information
-default:
+_default:
   @just --list
 
 # Install dependencies
@@ -83,13 +83,19 @@ fmt:
   bunx markdownlint-cli --fix '**/*.md' --ignore node_modules --ignore dist || echo "No markdown files to fix"
   @echo "All formatting complete!"
 
+_ensure-git-clean:
+  @if [ -n "$$(git status --porcelain)" ]; then \
+    echo "Error: Working directory is not clean. Please commit or stash changes."; \
+    exit 1; \
+  fi
+
 # Comprehensive linting with all available linters
 lint:
-  @echo "Running comprehensive linting..."
-  bun run lint
-  bun run typecheck
-  bunx markdownlint-cli '**/*.md' --ignore node_modules --ignore dist
-  @echo "ESLint, TypeScript, and Markdown linting complete!"
+    @echo "Running comprehensive linting..."
+    bun run lint
+    bun run typecheck
+    bunx markdownlint-cli '**/*.md' --ignore node_modules --ignore dist
+    @echo "ESLint, TypeScript, and Markdown linting complete!"
 
 # Run tests (skips dev/integration tests by default)
 test:
@@ -143,7 +149,7 @@ test-tool TOOL:
 check: typecheck lint test
 
 # Specfic entry point for the pre-commit hook
-pre-commit: fmt check
+pre-commit: fmt _ensure-git-clean check
 
 # Run comprehensive quality checks (includes Super-Linter)
 check-all: check superlint
