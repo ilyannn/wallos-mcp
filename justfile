@@ -118,7 +118,7 @@ e2e-setup:
 
 e2e-test: build
   @echo "Running E2E tests..."
-  @bun test tests/e2e/direct-mcp-test.ts
+  @bun test tests/e2e/direct-mcp.test.ts
 
 e2e-cleanup:
   @echo "Cleaning up E2E test environment..."

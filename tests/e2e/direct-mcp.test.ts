@@ -126,7 +126,11 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     }
   });
 
-  test.skipIf(!isWallosRunning)('should create subscription with auto_renew defaulting to true', async () => {
+  test('should create subscription with auto_renew defaulting to true', async () => {
+    if (!isWallosRunning) {
+      console.log('⏭️  Skipping test - Wallos is not running');
+      return;
+    }
     // Create subscription without specifying auto_renew
     const subscriptionData = {
       name: `Netflix E2E Test ${Date.now()}`,
@@ -163,7 +167,11 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     console.log(`✅ Subscription created with auto_renew=${subscription!.auto_renew}`);
   });
 
-  test.skipIf(!isWallosRunning)('should respect explicit auto_renew: false', async () => {
+  test('should respect explicit auto_renew: false', async () => {
+    if (!isWallosRunning) {
+      console.log('⏭️  Skipping test - Wallos is not running');
+      return;
+    }
     const subscriptionData = {
       name: `Spotify E2E Test ${Date.now()}`,
       price: 9.99,
@@ -194,7 +202,11 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     console.log(`✅ Subscription created with auto_renew=${subscription!.auto_renew}`);
   });
 
-  test.skipIf(!isWallosRunning)('should respect explicit auto_renew: true', async () => {
+  test('should respect explicit auto_renew: true', async () => {
+    if (!isWallosRunning) {
+      console.log('⏭️  Skipping test - Wallos is not running');
+      return;
+    }
     const subscriptionData = {
       name: `Disney+ E2E Test ${Date.now()}`,
       price: 7.99,
@@ -225,7 +237,11 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     console.log(`✅ Subscription created with auto_renew=${subscription!.auto_renew}`);
   });
 
-  test.skipIf(!isWallosRunning)('should handle subscription listing with filters', async () => {
+  test('should handle subscription listing with filters', async () => {
+    if (!isWallosRunning) {
+      console.log('⏭️  Skipping test - Wallos is not running');
+      return;
+    }
     // List all active subscriptions
     const activeResult = await wallosClient.getSubscriptions({
       state: 'active',
@@ -243,7 +259,11 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     console.log(`✅ Listed ${activeResult.subscriptions.length} active subscriptions`);
   });
 
-  test.skipIf(!isWallosRunning)('should get master data from real Wallos instance', async () => {
+  test('should get master data from real Wallos instance', async () => {
+    if (!isWallosRunning) {
+      console.log('⏭️  Skipping test - Wallos is not running');
+      return;
+    }
     const masterData = await wallosClient.getMasterData();
     
     expect(masterData).toHaveProperty('categories');
