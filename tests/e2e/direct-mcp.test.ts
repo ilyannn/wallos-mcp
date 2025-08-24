@@ -202,7 +202,7 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
     console.log(`✅ Subscription created with auto_renew=${subscription!.auto_renew}`);
   });
 
-  test.skip('should respect explicit auto_renew: true', async () => {
+  test('should respect explicit auto_renew: true', async () => {
     if (!isWallosRunning) {
       console.log('⏭️  Skipping test - Wallos is not running');
       return;
@@ -213,7 +213,7 @@ describe('E2E: MCP Server with Real Wallos Instance', () => {
       currency_code: 'USD',
       billing_period: 'monthly',
       category_name: 'Entertainment',
-      payment_method_name: 'Debit Card',
+      payment_method_name: 'Credit Card',
       auto_renew: true, // Explicitly set to true
       start_date: '2024-03-01',
       notes: 'E2E test with auto_renew true',

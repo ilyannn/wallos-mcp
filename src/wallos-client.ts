@@ -394,11 +394,11 @@ export class WallosClient {
     const formData = new FormData();
     formData.append('paymentname', name || '');
     formData.append('icon-url', 'https://github.com/favicon.ico'); // Simple public icon for tests
-    
+
     const response = await this.client.post('/endpoints/payments/add.php', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Content-Type': 'multipart/form-data',
+      },
     });
     if (!response || !response.data) {
       throw new Error('Invalid response from add payment method API');
