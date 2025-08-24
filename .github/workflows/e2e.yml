@@ -66,21 +66,21 @@ jobs:
         run: |
           echo "🚀 Starting Wallos test instance..."
           echo "Using configuration: tests/e2e/docker-compose.test.yml"
-          
+
           # Show what we're starting with
           echo "📋 Docker Compose Configuration:"
           cat tests/e2e/docker-compose.test.yml
           echo ""
-          
+
           # Check for existing containers that might conflict
           echo "🔍 Checking for existing containers on port 18282..."
           docker ps --filter "publish=18282" --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}" || true
           echo ""
-          
+
           # Start containers with detailed output
           echo "▶️ Starting containers..."
           docker compose -f tests/e2e/docker-compose.test.yml up -d --remove-orphans
-          
+
           echo "⏳ Waiting for containers to initialize..."
           sleep 5
 
@@ -116,7 +116,7 @@ jobs:
           echo "🔍 Container inspection:"
           docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test ls -la /var/www/html/ || echo "Could not list container contents"
           echo ""
-          
+
           # Check if database file exists and is accessible
           echo "💾 Checking database file in container:"
           docker compose -f tests/e2e/docker-compose.test.yml exec -T wallos-test ls -la /var/www/html/db/ || echo "Could not access database directory"
@@ -195,7 +195,7 @@ jobs:
             echo ""
             exit 1
           fi
-          
+
           echo "🎉 Wallos test instance is fully ready!"
 
       - name: Verify dev database and credentials
