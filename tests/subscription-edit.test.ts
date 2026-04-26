@@ -44,10 +44,23 @@ mock.module('tough-cookie', () => ({
   CookieJar: mock(() => mockCookieJar),
 }));
 
+// HTML body matching what Wallos embeds into authenticated pages via header.php.
+// fetchCsrfToken() does a GET '/' after login and parses this out of the response.
+const CSRF_HTML_STUB =
+  '<!DOCTYPE html><html><head><script>window.csrfToken = "test-csrf-token";</script></head></html>';
+
 // Helper to setup default mocks after reset
 const setupDefaultMocks = (subscriptionId?: number) => {
+  // fetchCsrfToken() performs a GET '/' right after login. Queue the stub
+  // at the front of the mock queue so this first GET always resolves to the
+  // CSRF HTML regardless of the URL-routing implementation below.
+  mockAxiosInstance.get.mockResolvedValueOnce({ status: 200, data: CSRF_HTML_STUB });
   // Setup default implementation that handles multiple endpoints
   mockAxiosInstance.get.mockImplementation((url) => {
+    if (url === '/') {
+      // Defensive default if the once-queue ran out.
+      return Promise.resolve({ status: 200, data: CSRF_HTML_STUB });
+    }
     if (url === '/api/subscriptions/get_subscriptions.php') {
       return Promise.resolve({
         data: {
@@ -119,8 +132,12 @@ describe('Subscription Editing', () => {
       },
     });
     
-    // Setup default mock for getSubscriptions endpoint
+    // Setup default mock: CSRF fetch + common read endpoints
     mockAxiosInstance.get.mockImplementation((url) => {
+      if (url === '/') {
+        // Post-login CSRF fetch (fetchCsrfToken follows '/'→subscriptions.php redirect).
+        return Promise.resolve({ status: 200, data: CSRF_HTML_STUB });
+      }
       if (url === '/api/subscriptions/get_subscriptions.php') {
         return Promise.resolve({
           data: {

@@ -27,6 +27,7 @@ export class WallosClient {
   private password?: string;
   private session?: SessionInfo;
   private cookieJar: tough.CookieJar;
+  private csrfToken?: string;
 
   constructor(config: WallosClientConfig) {
     if (!config.apiKey && (!config.username || !config.password)) {
@@ -69,6 +70,14 @@ export class WallosClient {
         } else {
           config.data = { ...config.data, api_key: this.apiKey };
         }
+      }
+
+      // Mutation endpoints under /endpoints/ require the CSRF token that
+      // Wallos embeds into the HTML as window.csrfToken. ensureSession()
+      // fetches it after login; set the header here for every such request.
+      if (config.url && config.url.startsWith('/endpoints/') && this.csrfToken) {
+        config.headers = config.headers || {};
+        config.headers['X-CSRF-Token'] = this.csrfToken;
       }
       return config;
     });
@@ -324,6 +333,48 @@ export class WallosClient {
     // Check if we need to authenticate or refresh
     if (!this.session || new Date() >= this.session.expiresAt) {
       await this.authenticateWithSession();
+      await this.fetchCsrfToken();
+    }
+  }
+
+  /**
+   * Fetch the CSRF token that Wallos embeds into authenticated HTML pages.
+   * Wallos enforces this token (see includes/validate_endpoint.php) on all
+   * /endpoints/* mutation requests, either as `csrf_token` POST field or as
+   * the `X-CSRF-Token` request header. The token is generated per session
+   * and is exposed as `window.csrfToken = "..."` in includes/header.php.
+   *
+   * Failure to extract a token is logged but not thrown; the subsequent
+   * mutation will surface the real server error ("Invalid CSRF token") and
+   * tests that do not mock the home page response can still exercise the
+   * mutation path.
+   */
+  private async fetchCsrfToken(): Promise<void> {
+    try {
+      // Wallos redirects '/' to 'subscriptions.php' post-login. Follow that
+      // redirect so we land on an authenticated HTML page that embeds
+      // `window.csrfToken` via includes/header.php.
+      const response = await this.client.get('/', {
+        maxRedirects: 3,
+        validateStatus: (status) => status >= 200 && status < 400,
+        // Override the JSON Accept default – Wallos returns HTML here.
+        headers: { Accept: 'text/html' },
+        responseType: 'text',
+        transformResponse: [(data) => data],
+      });
+      const html = typeof response.data === 'string' ? response.data : '';
+      const match = html.match(/window\.csrfToken\s*=\s*"([^"]+)"/);
+      if (match && match[1]) {
+        this.csrfToken = match[1];
+        return;
+      }
+      process.stderr.write(
+        'Warning: CSRF token not found on home page – mutations will likely fail.\n',
+      );
+    } catch (error) {
+      process.stderr.write(
+        `Warning: Failed to fetch CSRF token: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+      );
     }
   }
 
@@ -338,7 +389,7 @@ export class WallosClient {
       params.append('name', name);
     }
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     if (!response || !response.data) {
       throw new Error('Invalid response from add category API');
     }
@@ -357,7 +408,7 @@ export class WallosClient {
       name: name,
     });
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -376,7 +427,7 @@ export class WallosClient {
       categoryId: id.toString(),
     });
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -418,7 +469,7 @@ export class WallosClient {
       name: name,
     });
 
-    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
+    const response = await this.client.post(`/endpoints/payments/add.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -433,7 +484,7 @@ export class WallosClient {
       paymentMethodId: id.toString(),
     });
 
-    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
+    const response = await this.client.post(`/endpoints/payments/add.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -488,7 +539,7 @@ export class WallosClient {
       params.append('symbol', defaultSymbols[code.toUpperCase()] || code);
     }
 
-    const response = await this.client.get(`/endpoints/currency/currency.php?${params}`);
+    const response = await this.client.post(`/endpoints/currency/currency.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     if (!response || !response.data) {
       throw new Error('Invalid response from add currency API');
     }
@@ -526,7 +577,7 @@ export class WallosClient {
       params.append('email', `${sanitizedName}@household.local`);
     }
 
-    const response = await this.client.get(`/endpoints/household/household.php?${params}`);
+    const response = await this.client.post(`/endpoints/household/household.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -861,10 +912,12 @@ export class WallosClient {
       );
     }
 
-    // After successful creation, fetch the full subscription data
-    // We need to get all subscriptions and find the one we just created
+    // After successful creation, fetch the full subscription data — but cap
+    // it at 1500ms so SSE clients (claude.ai) don't drop on slow responses.
+    // If we can't enrich in time, the formatter still has response.data.
     try {
-      const subscriptionsResponse = await this.getSubscriptions();
+      const enrichTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const subscriptionsResponse = await Promise.race([this.getSubscriptions(), enrichTimeout]);
       if (
         subscriptionsResponse &&
         subscriptionsResponse.success &&
@@ -1095,9 +1148,11 @@ export class WallosClient {
       );
     }
 
-    // After successful edit, fetch the full subscription data
+    // After successful edit, fetch the full subscription data — capped at
+    // 1500ms so SSE clients (claude.ai) don't drop on slow responses.
     try {
-      const subscriptionsResponse = await this.getSubscriptions();
+      const enrichTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const subscriptionsResponse = await Promise.race([this.getSubscriptions(), enrichTimeout]);
       if (
         subscriptionsResponse &&
         subscriptionsResponse.success &&
