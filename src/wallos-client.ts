@@ -776,6 +776,24 @@ export class WallosClient {
       }
     }
 
+    // Wallos's own form always submits a payment method, and subscriptions.php
+    // indexes $payment_methods[$paymentMethodId] unguarded, so a NULL here makes
+    // the subscriptions page emit PHP warnings. Fall back to the first enabled one.
+    if (!paymentMethodId) {
+      try {
+        const methodsRes = await this.getPaymentMethods();
+        const firstEnabled = methodsRes?.payment_methods?.find((m) => m.enabled === 1);
+        if (firstEnabled) {
+          paymentMethodId = firstEnabled.id;
+        }
+      } catch (error) {
+        // Best effort: create the subscription without a default rather than fail.
+        process.stderr.write(
+          `Warning: could not look up a default payment method: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+        );
+      }
+    }
+
     // Determine payer user ID - use existing or default to main user
     let payerUserId: number | undefined;
     if (data.payer_user_name) {
