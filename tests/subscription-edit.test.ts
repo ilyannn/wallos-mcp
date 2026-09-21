@@ -49,6 +49,28 @@ mock.module('tough-cookie', () => ({
 const CSRF_HTML_STUB =
   '<!DOCTYPE html><html><head><script>window.csrfToken = "test-csrf-token";</script></head></html>';
 
+// Current records returned by get_subscriptions.php for ids 1..30. editSubscription
+// merges the caller's changes over these before posting the full record.
+const EXISTING_SUBSCRIPTIONS = Array.from({ length: 30 }, (_, i) => ({
+  id: i + 1,
+  name: `Existing ${i + 1}`,
+  price: 9.99,
+  currency_id: 1,
+  cycle: 3,
+  frequency: 1,
+  category_id: 2,
+  payment_method_id: 1,
+  payer_user_id: 1,
+  start_date: '2025-01-01',
+  next_payment: '2025-02-01',
+  auto_renew: 1,
+  notify: 0,
+  notify_days_before: null,
+  inactive: 0,
+  notes: 'keep me',
+  url: 'https://example.com',
+}));
+
 // Helper to setup default mocks after reset
 const setupDefaultMocks = (subscriptionId?: number) => {
   // fetchCsrfToken() performs a GET '/' right after login. Queue the stub
@@ -142,7 +164,9 @@ describe('Subscription Editing', () => {
         return Promise.resolve({
           data: {
             success: true,
-            subscriptions: [],
+            // editSubscription reads the current record before posting (add.php
+            // rewrites every column), so edited ids must exist.
+            subscriptions: EXISTING_SUBSCRIPTIONS,
             notes: [],
           },
         });
@@ -188,7 +212,7 @@ describe('Subscription Editing', () => {
       const result = await client.editSubscription(1, editData);
 
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
-        '/endpoints/subscription/edit.php',
+        '/endpoints/subscription/add.php',
         expect.any(URLSearchParams),
         expect.objectContaining({
           headers: {
@@ -226,7 +250,9 @@ describe('Subscription Editing', () => {
       const formData = lastCall[1] as URLSearchParams;
       expect(formData.get('id')).toBe('2');
       expect(formData.get('price')).toBe('19.99');
-      expect(formData.has('name')).toBe(false); // Should not include fields not specified
+      // add.php rewrites every column, so unchanged fields are resent from the current record
+      expect(formData.get('name')).toBe('Existing 2');
+      expect(formData.get('notes')).toBe('keep me');
 
       expect((result as any).status).toBe('Success');
     });
@@ -256,7 +282,8 @@ describe('Subscription Editing', () => {
       expect(formData.get('name')).toBe('Spotify Family');
       expect(formData.get('price')).toBe('14.99');
       expect(formData.get('notes')).toBe('Updated family plan');
-      expect(formData.get('auto_renew')).toBe('0');
+      // add.php uses isset(): '0' would switch auto-renew ON, so the field is omitted
+      expect(formData.get('auto_renew')).toBeNull();
 
       expect((result as any).status).toBe('Success');
     });
@@ -342,10 +369,11 @@ describe('Subscription Editing', () => {
         data: { success: true, categories: [] },
       });
 
-      // Create new category
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Create new category (POST add) and name it (POST edit)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, categoryId: 5 },
       });
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { success: true } });
 
       // Edit subscription
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -354,8 +382,10 @@ describe('Subscription Editing', () => {
 
       const result = await client.editSubscription(5, editData);
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/categories/category.php'),
+      expect(mockAxiosInstance.post).toHaveBeenCalledWith(
+        '/endpoints/categories/category.php',
+        expect.any(URLSearchParams),
+        expect.anything(),
       );
 
       const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
@@ -567,8 +597,8 @@ describe('Subscription Editing', () => {
         },
       });
 
-      // Create new currency
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Create new currency (POST)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, currency_id: 4 },
       });
 
@@ -579,12 +609,13 @@ describe('Subscription Editing', () => {
 
       const result = await client.editSubscription(10, editData);
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=add'),
+      const currencyCall = mockAxiosInstance.post.mock.calls.find(
+        (c) => c[0] === '/endpoints/currency/currency.php',
       );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('code=JPY'),
-      );
+      expect(currencyCall).toBeDefined();
+      const currencyForm = currencyCall![1] as URLSearchParams;
+      expect(currencyForm.get('action')).toBe('add');
+      expect(currencyForm.get('code')).toBe('JPY');
 
       const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
       const formData = lastCall[1] as URLSearchParams;
@@ -691,7 +722,8 @@ describe('Subscription Editing', () => {
 
       const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
       const formData = lastCall[1] as URLSearchParams;
-      expect(formData.get('notify')).toBe('1');
+      // add.php reads $_POST['notifications'] (not 'notify') with isset()
+      expect(formData.get('notifications')).toBe('1');
       expect(formData.get('notify_days_before')).toBe('7');
 
       expect((result as any).status).toBe('Success');
@@ -717,7 +749,8 @@ describe('Subscription Editing', () => {
 
       const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
       const formData = lastCall[1] as URLSearchParams;
-      expect(formData.get('notify')).toBe('0');
+      // add.php uses isset(): '0' would switch notifications ON, so the field is omitted
+      expect(formData.get('notifications')).toBeNull();
 
       expect((result as any).status).toBe('Success');
     });
@@ -768,10 +801,11 @@ describe('Subscription Editing', () => {
         data: { success: true, categories: [] },
       });
 
-      // Create category
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Create category (POST add) and name it (POST edit)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, categoryId: 10 },
       });
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { success: true } });
 
       // Get payment methods (not found, will create)
       mockAxiosInstance.get.mockResolvedValueOnce({
@@ -827,7 +861,8 @@ describe('Subscription Editing', () => {
       expect(formData.get('auto_renew')).toBe('1');
       expect(formData.get('notes')).toBe('Comprehensive subscription update test');
       expect(formData.get('url')).toBe('https://example.com/subscription');
-      expect(formData.get('notify')).toBe('1');
+      // add.php reads $_POST['notifications'] (not 'notify') with isset()
+      expect(formData.get('notifications')).toBe('1');
       expect(formData.get('notify_days_before')).toBe('30');
 
       expect((result as any).status).toBe('Success');
@@ -853,7 +888,13 @@ describe('Subscription Editing', () => {
       // Should only have the ID, no other fields
       expect(formData.get('id')).toBe('17');
       const keys = Array.from(formData.keys());
-      expect(keys.length).toBe(1); // Only 'id' should be present
+      // Nothing changed: the current record is resent as-is (add.php rewrites every column)
+      expect(keys).toContain('name');
+      expect(formData.get('name')).toBe('Existing 17');
+      expect(formData.get('notes')).toBe('keep me');
+      expect(formData.get('cycle')).toBe('3');
+      expect(formData.get('auto_renew')).toBe('1');
+      expect(formData.get('notifications')).toBeNull();
 
       expect((result as any).status).toBe('Success');
     });
@@ -906,13 +947,12 @@ describe('Subscription Editing', () => {
         status: 302,
         headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
       });
-      mockAxiosInstance.post.mockResolvedValueOnce({
-        data: { success: false, errorMessage: 'Subscription not found' },
-      });
-
       await expect(client.editSubscription(999, editData)).rejects.toThrow(
-        'Failed to edit subscription: Subscription not found',
+        'Subscription 999 not found',
       );
+      // The unknown id is caught before anything is posted to add.php
+      // (only the login POST happened).
+      expect(mockAxiosInstance.post).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -949,6 +989,22 @@ describe('Subscription Editing', () => {
             notes: 'Test notes',
           },
         },
+      });
+
+      // First get_subscriptions read is the pre-edit merge; the refresh after the
+      // edit returns the updated record.
+      const baseGet = mockAxiosInstance.get.getMockImplementation()!;
+      let subscriptionReads = 0;
+      mockAxiosInstance.get.mockImplementation((url: string, ...rest: unknown[]) => {
+        if (url === '/api/subscriptions/get_subscriptions.php' && subscriptionReads++ > 0) {
+          return Promise.resolve({
+            data: {
+              success: true,
+              subscriptions: [{ ...EXISTING_SUBSCRIPTIONS[19], name: 'Updated with Full Data' }],
+            },
+          });
+        }
+        return baseGet(url, ...rest);
       });
 
       const result = await client.editSubscription(20, editData);
