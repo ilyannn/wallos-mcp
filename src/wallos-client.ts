@@ -384,16 +384,28 @@ export class WallosClient {
   async addCategory(name?: string): Promise<CategoryMutationResponse> {
     await this.ensureSession();
 
+    // Wallos's "add" action ignores any name: handleAddCategory() always inserts
+    // a placeholder literally called "Category" and returns its id. The name is
+    // applied with a second "edit" call, as the Wallos UI does.
     const params = new URLSearchParams({ action: 'add' });
-    if (name) {
-      params.append('name', name);
-    }
 
     const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     if (!response || !response.data) {
       throw new Error('Invalid response from add category API');
     }
-    return response.data;
+
+    const created = response.data as CategoryMutationResponse;
+    if (name && created.success && created.categoryId) {
+      const renamed = await this.updateCategory(created.categoryId, name);
+      if (!renamed?.success) {
+        throw new Error(
+          `Category created (id ${created.categoryId}) but could not be renamed to "${name}": ${
+            renamed?.errorMessage || 'Unknown error'
+          }`,
+        );
+      }
+    }
+    return created;
   }
 
   /**
