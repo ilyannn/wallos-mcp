@@ -877,15 +877,17 @@ export class WallosClient {
     }
     // Default auto_renew to true if not specified
     const autoRenew = data.auto_renew !== undefined ? data.auto_renew : true;
-    formData.append('auto_renew', autoRenew ? '1' : '0');
+    if (autoRenew) {
+      formData.append('auto_renew', '1'); // add.php uses isset(): any value, even '0', means on
+    }
     if (data.notes) {
       formData.append('notes', data.notes);
     }
     if (data.url) {
       formData.append('url', data.url);
     }
-    if (data.notify !== undefined) {
-      formData.append('notifications', data.notify ? '1' : '0'); // PHP expects 'notifications'
+    if (data.notify) {
+      formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
     }
     if (data.notify_days_before !== undefined) {
       formData.append('notify_days_before', data.notify_days_before.toString());
@@ -1111,8 +1113,8 @@ export class WallosClient {
     if (data.next_payment !== undefined) {
       formData.append('next_payment', data.next_payment);
     }
-    if (data.auto_renew !== undefined) {
-      formData.append('auto_renew', data.auto_renew ? '1' : '0');
+    if (data.auto_renew) {
+      formData.append('auto_renew', '1'); // add.php uses isset(): any value, even '0', means on
     }
     if (data.notes !== undefined) {
       formData.append('notes', data.notes);
@@ -1120,8 +1122,8 @@ export class WallosClient {
     if (data.url !== undefined) {
       formData.append('url', data.url);
     }
-    if (data.notify !== undefined) {
-      formData.append('notifications', data.notify ? '1' : '0'); // PHP expects 'notifications'
+    if (data.notify) {
+      formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
     }
     if (data.notify_days_before !== undefined) {
       formData.append('notify_days_before', data.notify_days_before.toString());
