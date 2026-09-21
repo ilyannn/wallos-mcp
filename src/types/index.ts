@@ -188,6 +188,8 @@ export interface CreateSubscriptionData {
   url?: string;
   notify?: boolean;
   notify_days_before?: number;
+  inactive?: boolean; // mark as cancelled/paused instead of deleting
+  logo_url?: string; // public image URL; Wallos downloads it server-side
 }
 
 // Union type to support both old and new response formats

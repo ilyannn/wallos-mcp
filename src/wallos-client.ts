@@ -446,7 +446,11 @@ export class WallosClient {
   /**
    * Add a new payment method
    */
-  async addPaymentMethod(name?: string): Promise<PaymentMethodMutationResponse> {
+  async addPaymentMethod(
+    name?: string,
+    // Wallos requires an icon (URL or upload) for every payment method.
+    iconUrl = 'https://github.com/favicon.ico',
+  ): Promise<PaymentMethodMutationResponse> {
     await this.ensureSession();
 
     const params = new URLSearchParams({ action: 'add' });
@@ -456,7 +460,7 @@ export class WallosClient {
 
     const formData = new FormData();
     formData.append('paymentname', name || '');
-    formData.append('icon-url', 'https://github.com/favicon.ico'); // Simple public icon for tests
+    formData.append('icon-url', iconUrl);
 
     const response = await this.client.post('/endpoints/payments/add.php', formData, {
       headers: {
@@ -612,6 +616,26 @@ export class WallosClient {
    * Wallos uses: cycle (1=daily, 2=weekly, 3=monthly, 4=yearly) and frequency (multiplier)
    * We support flexible input like 'monthly', 'bi-weekly', '3 months', etc.
    */
+  /**
+   * Permanently delete a subscription.
+   *
+   * Unlike add.php, delete.php reads a JSON body (php://input); the CSRF token
+   * travels in the X-CSRF-Token header like for every other /endpoints/ call.
+   */
+  async deleteSubscription(id: number): Promise<{ success: boolean; message?: string }> {
+    await this.ensureSession();
+
+    const response = await this.client.post(
+      '/endpoints/subscription/delete.php',
+      { id },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!response || !response.data) {
+      throw new Error('Invalid response from delete subscription API');
+    }
+    return response.data;
+  }
+
   private parseBillingPeriod(
     period?: string | number,
     frequency?: number,
@@ -916,6 +940,12 @@ export class WallosClient {
     if (data.url) {
       formData.append('url', data.url);
     }
+    if (data.logo_url) {
+      formData.append('logo-url', data.logo_url);
+    }
+    if (data.inactive) {
+      formData.append('inactive', '1'); // add.php uses isset(): any value, even '0', means on
+    }
     if (data.notify) {
       formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
     }
@@ -1128,6 +1158,7 @@ export class WallosClient {
       url: current.url || undefined,
       notify: Boolean(Number(current.notify)),
       notify_days_before: current.notify_days_before ?? undefined,
+      inactive: Boolean(Number(current.inactive)),
       ...given,
     };
     // Keep the current cycle unless the caller changes it; a frequency-only
@@ -1185,6 +1216,13 @@ export class WallosClient {
     }
     if (merged.url !== undefined) {
       formData.append('url', merged.url);
+    }
+    // add.php keeps the existing logo when no new one is posted.
+    if (merged.logo_url) {
+      formData.append('logo-url', merged.logo_url);
+    }
+    if (merged.inactive) {
+      formData.append('inactive', '1'); // add.php uses isset(): any value, even '0', means on
     }
     if (merged.notify) {
       formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
