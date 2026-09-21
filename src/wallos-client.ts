@@ -1121,13 +1121,15 @@ export class WallosClient {
       formData.append('url', data.url);
     }
     if (data.notify !== undefined) {
-      formData.append('notify', data.notify ? '1' : '0');
+      formData.append('notifications', data.notify ? '1' : '0'); // PHP expects 'notifications'
     }
     if (data.notify_days_before !== undefined) {
       formData.append('notify_days_before', data.notify_days_before.toString());
     }
 
-    const response = await this.client.post('/endpoints/subscription/edit.php', formData, {
+    // Wallos has no edit.php: add.php doubles as the edit endpoint whenever a
+    // non-empty `id` is posted.
+    const response = await this.client.post('/endpoints/subscription/add.php', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
