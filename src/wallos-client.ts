@@ -1077,23 +1077,57 @@ export class WallosClient {
       payerUserId = data.payer_user_id;
     }
 
-    // Prepare form data for POST request - only include fields that are provided
+    // add.php rewrites every column of the subscription from the posted form, so
+    // a partial edit would silently blank out everything the caller did not pass
+    // (notes, url, dates, category, flags, ...). Read the current record and lay
+    // the caller's changes over it, so the full record is always sent.
+    const current = (await this.getSubscriptions())?.subscriptions?.find((s) => s.id === id);
+    if (!current) {
+      throw new Error(`Subscription ${id} not found`);
+    }
+    const given = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    ) as Partial<CreateSubscriptionData>;
+    const merged: Partial<CreateSubscriptionData> = {
+      name: current.name,
+      price: Number(current.price),
+      start_date: current.start_date || undefined,
+      next_payment: current.next_payment || undefined,
+      auto_renew: Boolean(Number(current.auto_renew)),
+      notes: current.notes || undefined,
+      url: current.url || undefined,
+      notify: Boolean(Number(current.notify)),
+      notify_days_before: current.notify_days_before ?? undefined,
+      ...given,
+    };
+    // Keep the current cycle unless the caller changes it; a frequency-only
+    // change applies to the current cycle.
+    if (given.billing_period === undefined) {
+      merged.billing_period = current.cycle;
+      merged.billing_frequency = given.billing_frequency ?? current.frequency;
+    }
+    currencyId ??= current.currency_id || undefined;
+    categoryId ??= current.category_id || undefined;
+    paymentMethodId ??= current.payment_method_id || undefined;
+    payerUserId ??= current.payer_user_id || undefined;
+
+    // Prepare form data for POST request (full record, see merge above)
     const formData = new URLSearchParams();
     formData.append('id', id.toString());
 
-    if (data.name !== undefined) {
-      formData.append('name', data.name);
+    if (merged.name !== undefined) {
+      formData.append('name', merged.name);
     }
-    if (data.price !== undefined) {
-      formData.append('price', data.price.toString());
+    if (merged.price !== undefined) {
+      formData.append('price', merged.price.toString());
     }
     if (currencyId !== undefined) {
       formData.append('currency_id', currencyId.toString());
     }
-    if (data.billing_period !== undefined || data.billing_frequency !== undefined) {
+    if (merged.billing_period !== undefined || merged.billing_frequency !== undefined) {
       const { cycle, frequency } = this.parseBillingPeriod(
-        data.billing_period,
-        data.billing_frequency,
+        merged.billing_period,
+        merged.billing_frequency,
       );
       formData.append('cycle', cycle.toString());
       formData.append('frequency', frequency.toString());
@@ -1107,26 +1141,26 @@ export class WallosClient {
     if (payerUserId !== undefined) {
       formData.append('payer_user_id', payerUserId.toString());
     }
-    if (data.start_date !== undefined) {
-      formData.append('start_date', data.start_date);
+    if (merged.start_date !== undefined) {
+      formData.append('start_date', merged.start_date);
     }
-    if (data.next_payment !== undefined) {
-      formData.append('next_payment', data.next_payment);
+    if (merged.next_payment !== undefined) {
+      formData.append('next_payment', merged.next_payment);
     }
-    if (data.auto_renew) {
+    if (merged.auto_renew) {
       formData.append('auto_renew', '1'); // add.php uses isset(): any value, even '0', means on
     }
-    if (data.notes !== undefined) {
-      formData.append('notes', data.notes);
+    if (merged.notes !== undefined) {
+      formData.append('notes', merged.notes);
     }
-    if (data.url !== undefined) {
-      formData.append('url', data.url);
+    if (merged.url !== undefined) {
+      formData.append('url', merged.url);
     }
-    if (data.notify) {
+    if (merged.notify) {
       formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
     }
-    if (data.notify_days_before !== undefined) {
-      formData.append('notify_days_before', data.notify_days_before.toString());
+    if (merged.notify_days_before !== undefined) {
+      formData.append('notify_days_before', merged.notify_days_before.toString());
     }
 
     // Wallos has no edit.php: add.php doubles as the edit endpoint whenever a
