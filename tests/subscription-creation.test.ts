@@ -45,10 +45,24 @@ mock.module('tough-cookie', () => ({
 }));
 
 // Helper to setup default mocks after reset
+// HTML body matching what Wallos embeds into authenticated pages via header.php.
+// fetchCsrfToken() does a GET '/' after login and parses this out of the response.
+const CSRF_HTML_STUB =
+  '<!DOCTYPE html><html><head><script>window.csrfToken = "test-csrf-token";</script></head></html>';
+
 const setupDefaultMocks = () => {
+  // fetchCsrfToken() performs a GET '/' right after login. Queue the stub
+  // at the front of the mock queue so this first GET always resolves to the
+  // CSRF HTML, and tests that queue `mockResolvedValueOnce` for their own
+  // endpoint calls line up starting at position 2.
+  mockAxiosInstance.get.mockResolvedValueOnce({ status: 200, data: CSRF_HTML_STUB });
   // Setup default implementation that handles multiple endpoints
   const originalImplementation = mockAxiosInstance.get.getMockImplementation();
   mockAxiosInstance.get.mockImplementation((url) => {
+    if (url === '/') {
+      // Post-login CSRF fetch – defensive default if the once-queue ran out.
+      return Promise.resolve({ status: 200, data: CSRF_HTML_STUB });
+    }
     if (url === '/api/subscriptions/get_subscriptions.php') {
       return Promise.resolve({
         data: {
@@ -74,6 +88,25 @@ const setupDefaultMocks = () => {
     }
     return undefined;
   });
+};
+
+// Mutations go to /endpoints/* as form-encoded POSTs. Answer the login POST
+// with a session cookie and every other POST with `data`.
+const mockMutation = (data: unknown) => {
+  mockAxiosInstance.post.mockImplementation((url: string) =>
+    Promise.resolve(
+      url === '/login.php'
+        ? { status: 302, headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] } }
+        : { data },
+    ),
+  );
+};
+
+// Form body of the first POST to `url`.
+const postedForm = (url: string, nth = 0): URLSearchParams => {
+  const calls = mockAxiosInstance.post.mock.calls.filter((c: unknown[]) => c[0] === url);
+  expect(calls.length).toBeGreaterThan(nth);
+  return calls[nth][1] as URLSearchParams;
 };
 
 describe('Subscription Creation', () => {
@@ -111,8 +144,12 @@ describe('Subscription Creation', () => {
       },
     });
     
-    // Setup default mock for getSubscriptions and getHousehold endpoints
+    // Setup default mock: CSRF fetch + common read endpoints
     mockAxiosInstance.get.mockImplementation((url) => {
+      if (url === '/') {
+        // Post-login CSRF fetch (fetchCsrfToken follows '/'→subscriptions.php redirect).
+        return Promise.resolve({ status: 200, data: CSRF_HTML_STUB });
+      }
       if (url === '/api/subscriptions/get_subscriptions.php') {
         return Promise.resolve({
           data: {
@@ -274,10 +311,11 @@ describe('Subscription Creation', () => {
         data: { success: true, categories: [] }, // No existing categories
       });
 
-      // Mock category creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Mock category creation (POST add) and naming (POST edit)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, categoryId: 8 },
       });
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { success: true } });
 
       // Mock get payment methods (to check if exists)
       mockAxiosInstance.get.mockResolvedValueOnce({
@@ -297,9 +335,12 @@ describe('Subscription Creation', () => {
       const result = await client.createSubscription(subscriptionData);
 
       // Verify category creation was called
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('/endpoints/categories/category.php'),
-      );
+      // Wallos ignores the name on "add" (always "Category"), so it is applied via "edit"
+      expect(postedForm('/endpoints/categories/category.php', 0).get('action')).toBe('add');
+      const rename = postedForm('/endpoints/categories/category.php', 1);
+      expect(rename.get('action')).toBe('edit');
+      expect(rename.get('categoryId')).toBe('8');
+      expect(rename.get('name')).toBe('Music Streaming');
 
       // Verify payment method creation was called
       expect(mockAxiosInstance.post).toHaveBeenCalledWith(
@@ -354,8 +395,8 @@ describe('Subscription Creation', () => {
         data: { success: true, categories: [] }, // No existing categories
       });
 
-      // Mock failed category creation
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Mock failed category creation (POST)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: false, errorMessage: 'Category creation failed' },
       });
 
@@ -443,71 +484,50 @@ describe('Subscription Creation', () => {
 
   describe('Payment Method Management', () => {
     test('should update payment method name', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
-        data: { success: true, message: 'Payment method updated' },
-      });
+      mockMutation({ success: true, message: 'Payment method updated' });
 
       const result = await client.updatePaymentMethod(2, 'Updated Payment');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=edit'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('paymentMethodId=2'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('name=Updated+Payment'),
-      );
+      const form = postedForm('/endpoints/payments/add.php');
+      expect(form.get('action')).toBe('edit');
+      expect(form.get('paymentMethodId')).toBe('2');
+      expect(form.get('name')).toBe('Updated Payment');
       expect((result as any).success).toBe(true);
     });
 
     test('should delete payment method', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
-        data: { success: true, message: 'Payment method removed' },
-      });
+      mockMutation({ success: true, message: 'Payment method removed' });
 
       const result = await client.deletePaymentMethod(3);
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=delete'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('paymentMethodId=3'),
-      );
+      const form = postedForm('/endpoints/payments/add.php');
+      expect(form.get('action')).toBe('delete');
+      expect(form.get('paymentMethodId')).toBe('3');
       expect((result as any).success).toBe(true);
     });
   });
 
   describe('Household Member Management', () => {
     test('should create household member with name and email', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
-        data: { success: true, household_member_id: 3 },
-      });
+      mockMutation({ success: true, household_member_id: 3 });
 
       const result = await client.addHouseholdMember('John Doe', 'john@example.com');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=add'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('name=John+Doe'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('email=john%40example.com'),
-      );
+      const form = postedForm('/endpoints/household/household.php');
+      expect(form.get('action')).toBe('add');
+      expect(form.get('name')).toBe('John Doe');
+      expect(form.get('email')).toBe('john@example.com');
       expect((result as any).success).toBe(true);
       expect(result.household_member_id).toBe(3);
     });
 
     test('should generate default email if not provided', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
-        data: { success: true, household_member_id: 4 },
-      });
+      mockMutation({ success: true, household_member_id: 4 });
 
       const result = await client.addHouseholdMember('Jane Smith');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('email=jane.smith%40household.local'),
+      expect(postedForm('/endpoints/household/household.php').get('email')).toBe(
+        'jane.smith@household.local',
       );
       expect((result as any).success).toBe(true);
     });
@@ -533,24 +553,15 @@ describe('Subscription Creation', () => {
 
   describe('Currency Management', () => {
     test('should create currency with code', async () => {
-      mockAxiosInstance.get.mockResolvedValue({
-        data: { success: true, currency_id: 5 },
-      });
+      mockMutation({ success: true, currency_id: 5 });
 
       const result = await client.addCurrency('EUR');
 
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('action=add'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('code=EUR'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('name=Euro'),
-      );
-      expect(mockAxiosInstance.get).toHaveBeenCalledWith(
-        expect.stringContaining('symbol=%E2%82%AC'), // URL encoded €
-      );
+      const form = postedForm('/endpoints/currency/currency.php');
+      expect(form.get('action')).toBe('add');
+      expect(form.get('code')).toBe('EUR');
+      expect(form.get('name')).toBe('Euro');
+      expect(form.get('symbol')).toBe('€');
       expect((result as any).success).toBe(true);
       expect(result.currency_id).toBe(5);
     });
@@ -698,10 +709,11 @@ Renews monthly`,
         data: { success: true, categories: [] },
       });
 
-      // Create category
-      mockAxiosInstance.get.mockResolvedValueOnce({
+      // Create category (POST add) and name it (POST edit)
+      mockAxiosInstance.post.mockResolvedValueOnce({
         data: { success: true, categoryId: 10 },
       });
+      mockAxiosInstance.post.mockResolvedValueOnce({ data: { success: true } });
 
       // Create subscription
       mockAxiosInstance.post.mockResolvedValueOnce({
@@ -750,7 +762,7 @@ Renews monthly`,
           username: 'testuser',
           password: 'testpass',
         });
-        
+
         // Replace the axios instance
         (freshClient as any).client = mockAxiosInstance;
 
@@ -760,9 +772,17 @@ Renews monthly`,
           headers: { 'set-cookie': ['PHPSESSID=test-session; path=/'] },
         });
 
+        // Post-login CSRF fetch
+        mockAxiosInstance.get.mockResolvedValueOnce({ status: 200, data: CSRF_HTML_STUB });
+
         // Get main currency
         mockAxiosInstance.get.mockResolvedValueOnce({
           data: { success: true, main_currency: 1, currencies: [] },
+        });
+
+        // Default payment method lookup (no payment method given)
+        mockAxiosInstance.get.mockResolvedValueOnce({
+          data: { success: true, payment_methods: [{ id: 1, name: 'PayPal', enabled: 1 }] },
         });
 
         // Create subscription
@@ -963,7 +983,8 @@ Renews monthly`,
       // Verify auto_renew was set to '0' (false)
       const lastCall = mockAxiosInstance.post.mock.calls[mockAxiosInstance.post.mock.calls.length - 1];
       const formData = lastCall[1] as URLSearchParams;
-      expect(formData.get('auto_renew')).toBe('0');
+      // add.php uses isset(): '0' would switch auto-renew ON, so the field is omitted
+      expect(formData.get('auto_renew')).toBeNull();
     });
 
     test('should respect explicit auto_renew: true', async () => {

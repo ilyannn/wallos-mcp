@@ -27,6 +27,7 @@ export class WallosClient {
   private password?: string;
   private session?: SessionInfo;
   private cookieJar: tough.CookieJar;
+  private csrfToken?: string;
 
   constructor(config: WallosClientConfig) {
     if (!config.apiKey && (!config.username || !config.password)) {
@@ -69,6 +70,14 @@ export class WallosClient {
         } else {
           config.data = { ...config.data, api_key: this.apiKey };
         }
+      }
+
+      // Mutation endpoints under /endpoints/ require the CSRF token that
+      // Wallos embeds into the HTML as window.csrfToken. ensureSession()
+      // fetches it after login; set the header here for every such request.
+      if (config.url && config.url.startsWith('/endpoints/') && this.csrfToken) {
+        config.headers = config.headers || {};
+        config.headers['X-CSRF-Token'] = this.csrfToken;
       }
       return config;
     });
@@ -324,6 +333,48 @@ export class WallosClient {
     // Check if we need to authenticate or refresh
     if (!this.session || new Date() >= this.session.expiresAt) {
       await this.authenticateWithSession();
+      await this.fetchCsrfToken();
+    }
+  }
+
+  /**
+   * Fetch the CSRF token that Wallos embeds into authenticated HTML pages.
+   * Wallos enforces this token (see includes/validate_endpoint.php) on all
+   * /endpoints/* mutation requests, either as `csrf_token` POST field or as
+   * the `X-CSRF-Token` request header. The token is generated per session
+   * and is exposed as `window.csrfToken = "..."` in includes/header.php.
+   *
+   * Failure to extract a token is logged but not thrown; the subsequent
+   * mutation will surface the real server error ("Invalid CSRF token") and
+   * tests that do not mock the home page response can still exercise the
+   * mutation path.
+   */
+  private async fetchCsrfToken(): Promise<void> {
+    try {
+      // Wallos redirects '/' to 'subscriptions.php' post-login. Follow that
+      // redirect so we land on an authenticated HTML page that embeds
+      // `window.csrfToken` via includes/header.php.
+      const response = await this.client.get('/', {
+        maxRedirects: 3,
+        validateStatus: (status) => status >= 200 && status < 400,
+        // Override the JSON Accept default – Wallos returns HTML here.
+        headers: { Accept: 'text/html' },
+        responseType: 'text',
+        transformResponse: [(data) => data],
+      });
+      const html = typeof response.data === 'string' ? response.data : '';
+      const match = html.match(/window\.csrfToken\s*=\s*"([^"]+)"/);
+      if (match && match[1]) {
+        this.csrfToken = match[1];
+        return;
+      }
+      process.stderr.write(
+        'Warning: CSRF token not found on home page – mutations will likely fail.\n',
+      );
+    } catch (error) {
+      process.stderr.write(
+        `Warning: Failed to fetch CSRF token: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+      );
     }
   }
 
@@ -333,16 +384,28 @@ export class WallosClient {
   async addCategory(name?: string): Promise<CategoryMutationResponse> {
     await this.ensureSession();
 
+    // Wallos's "add" action ignores any name: handleAddCategory() always inserts
+    // a placeholder literally called "Category" and returns its id. The name is
+    // applied with a second "edit" call, as the Wallos UI does.
     const params = new URLSearchParams({ action: 'add' });
-    if (name) {
-      params.append('name', name);
-    }
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     if (!response || !response.data) {
       throw new Error('Invalid response from add category API');
     }
-    return response.data;
+
+    const created = response.data as CategoryMutationResponse;
+    if (name && created.success && created.categoryId) {
+      const renamed = await this.updateCategory(created.categoryId, name);
+      if (!renamed?.success) {
+        throw new Error(
+          `Category created (id ${created.categoryId}) but could not be renamed to "${name}": ${
+            renamed?.errorMessage || 'Unknown error'
+          }`,
+        );
+      }
+    }
+    return created;
   }
 
   /**
@@ -357,7 +420,7 @@ export class WallosClient {
       name: name,
     });
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -376,14 +439,18 @@ export class WallosClient {
       categoryId: id.toString(),
     });
 
-    const response = await this.client.get(`/endpoints/categories/category.php?${params}`);
+    const response = await this.client.post(`/endpoints/categories/category.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
   /**
    * Add a new payment method
    */
-  async addPaymentMethod(name?: string): Promise<PaymentMethodMutationResponse> {
+  async addPaymentMethod(
+    name?: string,
+    // Wallos requires an icon (URL or upload) for every payment method.
+    iconUrl = 'https://github.com/favicon.ico',
+  ): Promise<PaymentMethodMutationResponse> {
     await this.ensureSession();
 
     const params = new URLSearchParams({ action: 'add' });
@@ -393,7 +460,7 @@ export class WallosClient {
 
     const formData = new FormData();
     formData.append('paymentname', name || '');
-    formData.append('icon-url', 'https://github.com/favicon.ico'); // Simple public icon for tests
+    formData.append('icon-url', iconUrl);
 
     const response = await this.client.post('/endpoints/payments/add.php', formData, {
       headers: {
@@ -418,7 +485,7 @@ export class WallosClient {
       name: name,
     });
 
-    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
+    const response = await this.client.post(`/endpoints/payments/add.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -433,7 +500,7 @@ export class WallosClient {
       paymentMethodId: id.toString(),
     });
 
-    const response = await this.client.get(`/endpoints/payments/add.php?${params}`);
+    const response = await this.client.post(`/endpoints/payments/add.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -488,7 +555,7 @@ export class WallosClient {
       params.append('symbol', defaultSymbols[code.toUpperCase()] || code);
     }
 
-    const response = await this.client.get(`/endpoints/currency/currency.php?${params}`);
+    const response = await this.client.post(`/endpoints/currency/currency.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     if (!response || !response.data) {
       throw new Error('Invalid response from add currency API');
     }
@@ -526,7 +593,7 @@ export class WallosClient {
       params.append('email', `${sanitizedName}@household.local`);
     }
 
-    const response = await this.client.get(`/endpoints/household/household.php?${params}`);
+    const response = await this.client.post(`/endpoints/household/household.php`, params, { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
     return response.data;
   }
 
@@ -549,6 +616,26 @@ export class WallosClient {
    * Wallos uses: cycle (1=daily, 2=weekly, 3=monthly, 4=yearly) and frequency (multiplier)
    * We support flexible input like 'monthly', 'bi-weekly', '3 months', etc.
    */
+  /**
+   * Permanently delete a subscription.
+   *
+   * Unlike add.php, delete.php reads a JSON body (php://input); the CSRF token
+   * travels in the X-CSRF-Token header like for every other /endpoints/ call.
+   */
+  async deleteSubscription(id: number): Promise<{ success: boolean; message?: string }> {
+    await this.ensureSession();
+
+    const response = await this.client.post(
+      '/endpoints/subscription/delete.php',
+      { id },
+      { headers: { 'Content-Type': 'application/json' } },
+    );
+    if (!response || !response.data) {
+      throw new Error('Invalid response from delete subscription API');
+    }
+    return response.data;
+  }
+
   private parseBillingPeriod(
     period?: string | number,
     frequency?: number,
@@ -713,6 +800,24 @@ export class WallosClient {
       }
     }
 
+    // Wallos's own form always submits a payment method, and subscriptions.php
+    // indexes $payment_methods[$paymentMethodId] unguarded, so a NULL here makes
+    // the subscriptions page emit PHP warnings. Fall back to the first enabled one.
+    if (!paymentMethodId) {
+      try {
+        const methodsRes = await this.getPaymentMethods();
+        const firstEnabled = methodsRes?.payment_methods?.find((m) => m.enabled === 1);
+        if (firstEnabled) {
+          paymentMethodId = firstEnabled.id;
+        }
+      } catch (error) {
+        // Best effort: create the subscription without a default rather than fail.
+        process.stderr.write(
+          `Warning: could not look up a default payment method: ${error instanceof Error ? error.message : 'Unknown error'}\n`,
+        );
+      }
+    }
+
     // Determine payer user ID - use existing or default to main user
     let payerUserId: number | undefined;
     if (data.payer_user_name) {
@@ -826,15 +931,23 @@ export class WallosClient {
     }
     // Default auto_renew to true if not specified
     const autoRenew = data.auto_renew !== undefined ? data.auto_renew : true;
-    formData.append('auto_renew', autoRenew ? '1' : '0');
+    if (autoRenew) {
+      formData.append('auto_renew', '1'); // add.php uses isset(): any value, even '0', means on
+    }
     if (data.notes) {
       formData.append('notes', data.notes);
     }
     if (data.url) {
       formData.append('url', data.url);
     }
-    if (data.notify !== undefined) {
-      formData.append('notifications', data.notify ? '1' : '0'); // PHP expects 'notifications'
+    if (data.logo_url) {
+      formData.append('logo-url', data.logo_url);
+    }
+    if (data.inactive) {
+      formData.append('inactive', '1'); // add.php uses isset(): any value, even '0', means on
+    }
+    if (data.notify) {
+      formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
     }
     if (data.notify_days_before !== undefined) {
       formData.append('notify_days_before', data.notify_days_before.toString());
@@ -861,10 +974,12 @@ export class WallosClient {
       );
     }
 
-    // After successful creation, fetch the full subscription data
-    // We need to get all subscriptions and find the one we just created
+    // After successful creation, fetch the full subscription data — but cap
+    // it at 1500ms so SSE clients (claude.ai) don't drop on slow responses.
+    // If we can't enrich in time, the formatter still has response.data.
     try {
-      const subscriptionsResponse = await this.getSubscriptions();
+      const enrichTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const subscriptionsResponse = await Promise.race([this.getSubscriptions(), enrichTimeout]);
       if (
         subscriptionsResponse &&
         subscriptionsResponse.success &&
@@ -1022,23 +1137,58 @@ export class WallosClient {
       payerUserId = data.payer_user_id;
     }
 
-    // Prepare form data for POST request - only include fields that are provided
+    // add.php rewrites every column of the subscription from the posted form, so
+    // a partial edit would silently blank out everything the caller did not pass
+    // (notes, url, dates, category, flags, ...). Read the current record and lay
+    // the caller's changes over it, so the full record is always sent.
+    const current = (await this.getSubscriptions())?.subscriptions?.find((s) => s.id === id);
+    if (!current) {
+      throw new Error(`Subscription ${id} not found`);
+    }
+    const given = Object.fromEntries(
+      Object.entries(data).filter(([, v]) => v !== undefined),
+    ) as Partial<CreateSubscriptionData>;
+    const merged: Partial<CreateSubscriptionData> = {
+      name: current.name,
+      price: Number(current.price),
+      start_date: current.start_date || undefined,
+      next_payment: current.next_payment || undefined,
+      auto_renew: Boolean(Number(current.auto_renew)),
+      notes: current.notes || undefined,
+      url: current.url || undefined,
+      notify: Boolean(Number(current.notify)),
+      notify_days_before: current.notify_days_before ?? undefined,
+      inactive: Boolean(Number(current.inactive)),
+      ...given,
+    };
+    // Keep the current cycle unless the caller changes it; a frequency-only
+    // change applies to the current cycle.
+    if (given.billing_period === undefined) {
+      merged.billing_period = current.cycle;
+      merged.billing_frequency = given.billing_frequency ?? current.frequency;
+    }
+    currencyId ??= current.currency_id || undefined;
+    categoryId ??= current.category_id || undefined;
+    paymentMethodId ??= current.payment_method_id || undefined;
+    payerUserId ??= current.payer_user_id || undefined;
+
+    // Prepare form data for POST request (full record, see merge above)
     const formData = new URLSearchParams();
     formData.append('id', id.toString());
 
-    if (data.name !== undefined) {
-      formData.append('name', data.name);
+    if (merged.name !== undefined) {
+      formData.append('name', merged.name);
     }
-    if (data.price !== undefined) {
-      formData.append('price', data.price.toString());
+    if (merged.price !== undefined) {
+      formData.append('price', merged.price.toString());
     }
     if (currencyId !== undefined) {
       formData.append('currency_id', currencyId.toString());
     }
-    if (data.billing_period !== undefined || data.billing_frequency !== undefined) {
+    if (merged.billing_period !== undefined || merged.billing_frequency !== undefined) {
       const { cycle, frequency } = this.parseBillingPeriod(
-        data.billing_period,
-        data.billing_frequency,
+        merged.billing_period,
+        merged.billing_frequency,
       );
       formData.append('cycle', cycle.toString());
       formData.append('frequency', frequency.toString());
@@ -1052,29 +1202,38 @@ export class WallosClient {
     if (payerUserId !== undefined) {
       formData.append('payer_user_id', payerUserId.toString());
     }
-    if (data.start_date !== undefined) {
-      formData.append('start_date', data.start_date);
+    if (merged.start_date !== undefined) {
+      formData.append('start_date', merged.start_date);
     }
-    if (data.next_payment !== undefined) {
-      formData.append('next_payment', data.next_payment);
+    if (merged.next_payment !== undefined) {
+      formData.append('next_payment', merged.next_payment);
     }
-    if (data.auto_renew !== undefined) {
-      formData.append('auto_renew', data.auto_renew ? '1' : '0');
+    if (merged.auto_renew) {
+      formData.append('auto_renew', '1'); // add.php uses isset(): any value, even '0', means on
     }
-    if (data.notes !== undefined) {
-      formData.append('notes', data.notes);
+    if (merged.notes !== undefined) {
+      formData.append('notes', merged.notes);
     }
-    if (data.url !== undefined) {
-      formData.append('url', data.url);
+    if (merged.url !== undefined) {
+      formData.append('url', merged.url);
     }
-    if (data.notify !== undefined) {
-      formData.append('notify', data.notify ? '1' : '0');
+    // add.php keeps the existing logo when no new one is posted.
+    if (merged.logo_url) {
+      formData.append('logo-url', merged.logo_url);
     }
-    if (data.notify_days_before !== undefined) {
-      formData.append('notify_days_before', data.notify_days_before.toString());
+    if (merged.inactive) {
+      formData.append('inactive', '1'); // add.php uses isset(): any value, even '0', means on
+    }
+    if (merged.notify) {
+      formData.append('notifications', '1'); // add.php uses isset(): any value, even '0', means on
+    }
+    if (merged.notify_days_before !== undefined) {
+      formData.append('notify_days_before', merged.notify_days_before.toString());
     }
 
-    const response = await this.client.post('/endpoints/subscription/edit.php', formData, {
+    // Wallos has no edit.php: add.php doubles as the edit endpoint whenever a
+    // non-empty `id` is posted.
+    const response = await this.client.post('/endpoints/subscription/add.php', formData, {
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
@@ -1095,9 +1254,11 @@ export class WallosClient {
       );
     }
 
-    // After successful edit, fetch the full subscription data
+    // After successful edit, fetch the full subscription data — capped at
+    // 1500ms so SSE clients (claude.ai) don't drop on slow responses.
     try {
-      const subscriptionsResponse = await this.getSubscriptions();
+      const enrichTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
+      const subscriptionsResponse = await Promise.race([this.getSubscriptions(), enrichTimeout]);
       if (
         subscriptionsResponse &&
         subscriptionsResponse.success &&

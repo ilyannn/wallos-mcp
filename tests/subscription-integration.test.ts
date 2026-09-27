@@ -49,6 +49,11 @@ mock.module('tough-cookie', () => ({
   CookieJar: mock(() => mockCookieJar),
 }));
 
+// HTML body matching what Wallos embeds into authenticated pages via header.php.
+// fetchCsrfToken() does a GET '/' after login and parses this out of the response.
+const CSRF_HTML_STUB =
+  '<!DOCTYPE html><html><head><script>window.csrfToken = "test-csrf-token";</script></head></html>';
+
 describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => {
   let client: WallosClient;
   let stderrSpy: ReturnType<typeof mock>;
@@ -79,6 +84,12 @@ describe.skipIf(SKIP_INTEGRATION_TESTS)('Subscription Integration Tests', () => 
         'set-cookie': ['PHPSESSID=test-session; path=/'],
       },
     });
+
+    // fetchCsrfToken() performs a GET '/' right after login. Queue the stub
+    // at the front of the mock queue so this first GET always resolves to
+    // the CSRF HTML, leaving test-specific mockResolvedValueOnce chains
+    // lined up starting at position 2.
+    mockAxiosInstance.get.mockResolvedValueOnce({ status: 200, data: CSRF_HTML_STUB });
 
     client = new WallosClient(mockConfig);
   });

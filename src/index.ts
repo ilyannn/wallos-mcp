@@ -42,6 +42,8 @@ import {
   handleCreateSubscription,
   editSubscriptionTool,
   handleEditSubscription,
+  deleteSubscriptionTool,
+  handleDeleteSubscription,
 } from './tools/subscriptions.js';
 
 // Get configuration from environment variables
@@ -92,6 +94,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       deleteCategoryTool,
       createSubscriptionTool,
       editSubscriptionTool,
+      deleteSubscriptionTool,
     );
   }
 
@@ -158,6 +161,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       break;
     }
 
+    case 'delete_subscription': {
+      if (!args || typeof args.id !== 'number') {
+        throw new Error('delete_subscription requires id to be a number');
+      }
+      result = await handleDeleteSubscription(wallosClient, { id: args.id });
+      break;
+    }
+
     default:
       throw new Error(`Unknown tool: ${name}`);
   }
@@ -204,7 +215,7 @@ async function main(): Promise<void> {
     process.stderr.write(
       'Available tools: get_master_data, list_subscriptions' +
         (WALLOS_USERNAME && WALLOS_PASSWORD
-          ? ', add_category, update_category, delete_category, create_subscription, edit_subscription'
+          ? ', add_category, update_category, delete_category, create_subscription, edit_subscription, delete_subscription'
           : '') +
         '\n',
     );
@@ -215,7 +226,7 @@ async function main(): Promise<void> {
     );
   } else if (WALLOS_USERNAME && WALLOS_PASSWORD) {
     process.stderr.write(
-      'Available tools: get_master_data, list_subscriptions, add_category, update_category, delete_category, create_subscription, edit_subscription\n',
+      'Available tools: get_master_data, list_subscriptions, add_category, update_category, delete_category, create_subscription, edit_subscription, delete_subscription\n',
     );
     process.stderr.write('Full access enabled (username/password - API key will be retrieved)\n');
   }

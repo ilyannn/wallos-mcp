@@ -251,6 +251,10 @@ export const createSubscriptionTool: Tool = {
         type: 'number',
         description: 'Days before renewal to send notification',
       },
+      logo_url: {
+        type: 'string',
+        description: 'Public image URL to use as the subscription logo (downloaded by Wallos)',
+      },
     },
     required: ['name', 'price'],
     additionalProperties: false,
@@ -420,6 +424,14 @@ export const editSubscriptionTool: Tool = {
         type: 'number',
         description: 'Days before renewal to send notification',
       },
+      inactive: {
+        type: 'boolean',
+        description: 'Mark the subscription inactive (cancelled/paused) or active again',
+      },
+      logo_url: {
+        type: 'string',
+        description: 'Public image URL to use as the new logo (downloaded by Wallos); the current logo is kept if omitted',
+      },
     },
     required: ['id'],
     additionalProperties: false,
@@ -491,5 +503,39 @@ export async function handleEditSubscription(
       return `❌ Error editing subscription: ${error.message}`;
     }
     return '❌ Error editing subscription: Unknown error occurred';
+  }
+}
+
+export const deleteSubscriptionTool: Tool = {
+  name: 'delete_subscription',
+  description:
+    'Permanently delete a subscription. Prefer edit_subscription with inactive: true to keep its history.',
+  inputSchema: {
+    type: 'object',
+    properties: {
+      id: {
+        type: 'number',
+        description: 'ID of the subscription to delete',
+      },
+    },
+    required: ['id'],
+    additionalProperties: false,
+  },
+};
+
+export async function handleDeleteSubscription(
+  client: WallosClient,
+  args: { id: number },
+): Promise<string> {
+  try {
+    const response = await client.deleteSubscription(args.id);
+    if (!response.success) {
+      throw new Error(response.message || 'Unknown error');
+    }
+    return `🗑️ Deleted subscription ${args.id}.`;
+  } catch (error) {
+    throw new Error(
+      `Failed to delete subscription: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    );
   }
 }

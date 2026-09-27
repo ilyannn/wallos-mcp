@@ -43,6 +43,22 @@ mock.module('tough-cookie', () => ({
   CookieJar: mock(() => mockCookieJar),
 }));
 
+/**
+ * After authenticateWithSession() the client calls fetchCsrfToken() which
+ * issues a GET '/' and parses `window.csrfToken` out of the returned HTML.
+ * Tests whose mutation path goes through ensureSession() must queue this
+ * CSRF response as the FIRST get (via mockResolvedValueOnce) so the
+ * subsequent `mockResolvedValue` they register for their endpoint is
+ * consumed by the second call.
+ */
+const CSRF_HTML_STUB = {
+  status: 200,
+  data: '<!DOCTYPE html><html><head><script>window.csrfToken = "test-csrf-token";</script></head></html>',
+};
+function stubCsrfGet(mockFn: { mockResolvedValueOnce: (v: unknown) => unknown }): void {
+  mockFn.mockResolvedValueOnce(CSRF_HTML_STUB);
+}
+
 describe('WallosClient Session Authentication', () => {
   let client: WallosClient;
   let stderrSpy: any;
@@ -87,7 +103,8 @@ describe('WallosClient Session Authentication', () => {
       };
       mockCookieJar.getCookies.mockResolvedValue([mockSessionCookie]);
 
-      // Mock successful category add with session
+      // 1st GET after login = CSRF fetch, 2nd GET = category endpoint.
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, categoryId: 10 },
       });
@@ -152,8 +169,8 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should reuse existing session when not expired', async () => {
-      // First call - authenticate
-      mockAxiosInstance.post.mockResolvedValue({ 
+      // First call - authenticate (login + CSRF fetch + endpoint)
+      mockAxiosInstance.post.mockResolvedValue({
         status: 302,
         headers: {
           'set-cookie': ['PHPSESSID=session1; path=/']
@@ -162,6 +179,7 @@ describe('WallosClient Session Authentication', () => {
       mockCookieJar.getCookies.mockResolvedValue([
         { key: 'PHPSESSID', value: 'session1' },
       ]);
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, categoryId: 1 },
       });
@@ -169,7 +187,7 @@ describe('WallosClient Session Authentication', () => {
       await client.addCategory('Category 1');
       expect(mockAxiosInstance.post).toHaveBeenCalledTimes(1);
 
-      // Second call - should reuse session
+      // Second call - should reuse session AND cached CSRF token.
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, categoryId: 2 },
       });
@@ -183,7 +201,7 @@ describe('WallosClient Session Authentication', () => {
   describe('Category Mutations', () => {
     beforeEach(() => {
       // Setup successful authentication mock
-      mockAxiosInstance.post.mockResolvedValue({ 
+      mockAxiosInstance.post.mockResolvedValue({
         status: 302,
         headers: {
           'set-cookie': ['PHPSESSID=test-session; path=/']
@@ -192,9 +210,14 @@ describe('WallosClient Session Authentication', () => {
       mockCookieJar.getCookies.mockResolvedValue([
         { key: 'PHPSESSID', value: 'test-session' },
       ]);
+      // Note: stubCsrfGet() is called per-test (only when the mutation
+      // actually triggers a GET), to avoid leaking queued mockResolvedValueOnce
+      // values into tests that should not issue any GETs (e.g. the default
+      // category deletion guard test which must assert 'not called').
     });
 
     test('should add category with default name', async () => {
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, categoryId: 5 },
       });
@@ -209,6 +232,7 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should add category with custom name', async () => {
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, categoryId: 6 },
       });
@@ -225,6 +249,7 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should update category name', async () => {
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, message: 'Category saved' },
       });
@@ -244,6 +269,7 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should delete category', async () => {
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: { success: true, message: 'Category removed' },
       });
@@ -268,6 +294,7 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should handle category in use error', async () => {
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: {
           success: false,
@@ -303,7 +330,7 @@ describe('WallosClient Session Authentication', () => {
     });
 
     test('should handle malformed server responses', async () => {
-      mockAxiosInstance.post.mockResolvedValue({ 
+      mockAxiosInstance.post.mockResolvedValue({
         status: 302,
         headers: {
           'set-cookie': ['PHPSESSID=malformed-session; path=/']
@@ -313,7 +340,8 @@ describe('WallosClient Session Authentication', () => {
         { key: 'PHPSESSID', value: 'session' },
       ]);
 
-      // Return malformed response
+      // CSRF fetch first, then the malformed endpoint response
+      stubCsrfGet(mockAxiosInstance.get);
       mockAxiosInstance.get.mockResolvedValue({
         data: 'Not JSON',
       });
